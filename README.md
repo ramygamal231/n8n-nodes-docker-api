@@ -3,7 +3,7 @@
 # 🐳 n8n-nodes-docker-api
 
 ![npm](https://img.shields.io/npm/v/n8n-nodes-docker-api)
-![License](https://img.shields.io/npm/l/n8n-nodes-docker-api)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > Interact with Docker via direct API (no Portainer required) — manage containers, stream logs, and automate infrastructure with ease.
 

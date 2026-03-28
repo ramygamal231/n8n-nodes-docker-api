@@ -13,6 +13,16 @@ _No changes yet. Add items here as they are merged into `staging`._
 
 ---
 
+## [0.1.1] - 2026-03-28
+
+### Fixed
+
+- Corrected asset path for node icon, ensuring it displays correctly in the n8n editor.
+- Updated all internal package references from `n8n-nodes-docker` to `n8n-nodes-docker-api`.
+- Fixed the license badge in `README.md` to display correctly.
+
+---
+
 ## [0.1.0] - 2026-03-23
 
 ### Added
