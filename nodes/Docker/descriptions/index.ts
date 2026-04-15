@@ -2,6 +2,7 @@ import { INodeProperties } from 'n8n-workflow';
 
 import { listContainerFields } from './container/list.description';
 import { getLogsContainerFields } from './container/getLogs.description';
+import { createContainerFields } from './container/create.description';
 import { startContainerFields } from './container/start.description';
 import { stopContainerFields } from './container/stop.description';
 
@@ -30,6 +31,12 @@ export const containerOperations: INodeProperties[] = [
         action: 'Get container logs',
       },
       {
+        name: 'Create Container',
+        value: 'create',
+        description: 'Create a container',
+        action: 'Create container',
+      },
+      {
         name: 'Start Container',
         value: 'start',
         description: 'Start a container',
@@ -49,6 +56,7 @@ export const containerOperations: INodeProperties[] = [
 export const containerFields: INodeProperties[] = [
   ...listContainerFields,
   ...getLogsContainerFields,
+  ...createContainerFields,
   ...startContainerFields,
   ...stopContainerFields,
 ];
