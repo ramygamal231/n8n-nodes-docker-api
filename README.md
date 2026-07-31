@@ -227,6 +227,18 @@ Schedule → List Containers → Aggregate → Report
 
 ---
 
+## ⚠️ Known Limitations (v1)
+
+### No Built-in Retry Logic
+
+The current version **does not retry failed Docker operations**. If the Docker daemon becomes unreachable mid-workflow, operations fail immediately.
+
+**Workaround:** Add n8n's built-in "Retry On Fail" node before Docker operations in your workflow.
+
+**Planned:** Retry logic with exponential backoff in v2.
+
+---
+
 ## 🧪 Testing
 
 ```bash
@@ -239,6 +251,7 @@ npm test
 
 ### v2
 
+* Retry logic with exponential backoff
 * Restart Container
 * Remove Container
 * Image operations (list/pull/remove)

@@ -30,7 +30,7 @@
     "format": "prettier nodes credentials --write",
     "lint": "eslint nodes credentials --ext .ts",
     "lintfix": "eslint nodes credentials --ext .ts --fix",
-    "prepublishOnly": "npm run build && npm run lint",
+    "prepublishOnly": "npm run build && npm run lint && npm test",
     "test": "jest"
   },
   "n8n": {

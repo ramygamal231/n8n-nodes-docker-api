@@ -7,9 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned for Next Release
+### Fixed
 
-_No changes yet. Add items here as they are merged into `staging`._
+- **Container logs from TTY containers returned nothing.** Containers started with
+  a TTY (`docker run -t`, or `tty: true` in Compose) emit a raw, unframed log
+  stream, while non-TTY containers use Docker's 8-byte multiplexed framing. The
+  parser assumed framing unconditionally, misread the first bytes of log text as a
+  length field, and silently returned `logs: []` with `lineCount: 0` — reported as
+  a successful execution with no error. Get Container Logs now inspects the
+  container and parses whichever format Docker actually sends.
+
+### Added
+
+- `tty` field on Get Container Logs output, indicating which log format the
+  container uses.
+- `warning` field on Get Container Logs when a stream filter is requested for a
+  TTY container. Docker merges stdout and stderr into one stream for TTY
+  containers, so filtering is not possible; all output is returned and labelled
+  `stdout` rather than silently yielding nothing.
+- Unit tests for both log parsers, including a regression test built from real
+  bytes captured off a live TTY container.
 
 ---
 
