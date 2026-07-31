@@ -1,5 +1,54 @@
 export function translateDockerError(error: unknown): string {
   const msg = (error as Error)?.message ?? String(error);
+  const lower = msg.toLowerCase();
+
+  // --- registry errors -----------------------------------------------------
+  // These must be checked BEFORE the generic "not found" rules below. A failed
+  // pull says "manifest ... not found", which would otherwise be reported as
+  // "the container or image may have been removed" — technically true and
+  // completely unhelpful when the real problem is a typo in the image name.
+  if (lower.includes('manifest unknown') || /manifest for .* not found/.test(lower)) {
+    return (
+      'Image not found in the registry. Check the image name and tag are correct, ' +
+      'and that the tag exists for this platform.'
+    );
+  }
+  if (lower.includes('pull access denied') || lower.includes('repository does not exist')) {
+    return (
+      'Access denied by the registry. The repository may not exist, or it is private ' +
+      'and requires registry credentials.'
+    );
+  }
+  if (lower.includes('unauthorized') || lower.includes('authentication required')) {
+    return (
+      'Registry authentication failed. Add registry credentials under Additional Fields, ' +
+      'or check that the token has not expired.'
+    );
+  }
+  if (lower.includes('tag does not exist') || lower.includes('no such image')) {
+    return (
+      'Image not found locally. Pull it first, or check the reference — an image ID is ' +
+      'not the same as a name:tag.'
+    );
+  }
+  if (lower.includes('no such host') || lower.includes('dial tcp')) {
+    return (
+      'Cannot reach the registry. Check the registry address and that the Docker host ' +
+      'has network access to it.'
+    );
+  }
+  if (lower.includes('server gave http response to https client')) {
+    return (
+      'The registry answered over plain HTTP but Docker expected HTTPS. For a local or ' +
+      'internal registry, add it to the daemon’s insecure-registries list.'
+    );
+  }
+  if (lower.includes('image is being used by') || lower.includes('conflict: unable to delete')) {
+    return (
+      'Image is still in use by one or more containers. Remove those containers first, ' +
+      'or enable Force.'
+    );
+  }
 
   if (msg.includes('ECONNREFUSED')) {
     return 'Cannot connect to Docker daemon. Is Docker running? Check your connection settings.';

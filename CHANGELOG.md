@@ -23,6 +23,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **New Image resource with nine operations**: List, Inspect, Get History,
+  Search, Pull, Push, Tag, Remove and Prune.
+  - **Pull and Push** consume Docker's progress stream to completion and return a
+    summary — layers processed, digest, final status and duration — rather than
+    returning a stream that never ends or a wall of progress JSON. Failures that
+    Docker reports *inside* an otherwise successful response are detected and
+    raised, so a failed pull is never reported as a success.
+  - **Remove** and **Prune** support dry run. Prune's preview lists the exact
+    images that would go and the space reclaimed, and states plainly when the
+    list cannot be exact — with "Dangling Only" disabled, Docker removes every
+    image not referenced by a container, which cannot be determined in advance.
+  - **Get History** reports each layer with its size and the command that created
+    it, plus a total.
+  - Image output is normalized the same way containers are, from a single source
+    of truth, so list and inspect cannot diverge.
+  - `includeLabels` defaults to **off** for image listings: image labels commonly
+    carry large vendor descriptions, and enabling them can make a single list
+    item eleven times bigger.
+- **Registry error messages.** A failed pull previously reported "the container
+  or image may have been removed". Missing images, private repositories, expired
+  credentials, unreachable registries, HTTP/HTTPS mismatches and images still in
+  use by a container now each get an accurate, actionable message.
 - **Nine new container operations**, bringing the container resource to fifteen:
   Inspect, Create, Restart, Kill, Pause, Unpause, Rename, Remove, List Processes
   and Get Filesystem Changes.

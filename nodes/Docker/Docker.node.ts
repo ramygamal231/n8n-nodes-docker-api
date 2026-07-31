@@ -12,7 +12,9 @@ import {
 
 import { createDockerClient } from '../../utils/dockerClient';
 import { containerOperations, containerFields } from './descriptions';
+import { imageOperations, imageFields } from './descriptions/image/image.description';
 import { executeContainerOperation } from './actions';
+import { executeImageOperation } from './actions/imageIndex';
 import { enforceAccessMode } from './helpers/accessGuard';
 import { translateDockerError } from './helpers/errorHandler';
 
@@ -48,11 +50,17 @@ export class Docker implements INodeType {
             name: 'Container',
             value: 'container',
           },
+          {
+            name: 'Image',
+            value: 'image',
+          },
         ],
         default: 'container',
       },
       ...containerOperations,
       ...containerFields,
+      ...imageOperations,
+      ...imageFields,
     ],
   };
 
@@ -99,7 +107,10 @@ export class Docker implements INodeType {
 
     for (let i = 0; i < items.length; i++) {
       try {
-        const result = await executeContainerOperation.call(this, docker, operation, i);
+        const result =
+          resource === 'image'
+            ? await executeImageOperation.call(this, docker, operation, i)
+            : await executeContainerOperation.call(this, docker, operation, i);
         returnData.push(...result);
       } catch (error) {
         if (this.continueOnFail()) {
