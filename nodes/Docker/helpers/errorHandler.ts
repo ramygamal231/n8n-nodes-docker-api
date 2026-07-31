@@ -59,7 +59,20 @@ export function translateDockerError(error: unknown): string {
   if (msg.toLowerCase().includes('permission denied')) {
     return 'Permission denied accessing Docker socket. Ensure the n8n process has permission to access the socket.';
   }
-  if (msg.includes('No such container') || msg.includes('not found')) {
+  // Must precede the container rule below. Docker answers an unrecognised
+  // endpoint with "page not found", which a broad 'not found' match reported as
+  // "Container not found" — actively misleading, since no container is involved.
+  if (lower.includes('page not found')) {
+    return (
+      'Docker does not recognise that API endpoint. Check the path, and that the ' +
+      'endpoint exists in your Docker Engine version.'
+    );
+  }
+  if (
+    msg.includes('No such container') ||
+    /container .*not found/i.test(msg) ||
+    msg.includes('no such id')
+  ) {
     return 'Container not found. Verify the container ID or name is correct and the container exists.';
   }
   if (msg.includes('is not running')) {

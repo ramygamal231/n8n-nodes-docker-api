@@ -79,3 +79,24 @@ describe('translateDockerError', () => {
     expect(result).toBe('undefined');
   });
 });
+
+describe('translateDockerError — endpoint vs container (v1.0.0)', () => {
+  it('REGRESSION: an unknown API endpoint is not reported as a missing container', () => {
+    // Docker answers an unrecognised path with "page not found". A broad
+    // 'not found' match turned that into "Container not found", which is
+    // actively misleading when no container is involved. Surfaced by the
+    // Custom API Call operation hitting a bogus path.
+    const result = translateDockerError(new Error('(HTTP code 404) unexpected - page not found'));
+    expect(result).toContain('does not recognise that API endpoint');
+    expect(result).not.toContain('Container not found');
+  });
+
+  it('still reports a genuinely missing container correctly', () => {
+    expect(translateDockerError(new Error('No such container: abc123'))).toContain(
+      'Container not found',
+    );
+    expect(translateDockerError(new Error('Error: container xyz not found'))).toContain(
+      'Container not found',
+    );
+  });
+});

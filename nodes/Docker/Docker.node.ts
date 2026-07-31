@@ -18,9 +18,14 @@ import {
   volumeOperations, volumeFields,
   systemOperations, systemFields,
 } from './descriptions/infra.description';
+import {
+  customApiOperations,
+  customApiFields,
+} from './descriptions/customApiCall.description';
 import { executeContainerOperation } from './actions';
 import { executeImageOperation } from './actions/imageIndex';
 import { executeInfraOperation } from './actions/infraIndex';
+import { customApiCall } from './actions/customApiCall.operation';
 import { enforceAccessMode } from './helpers/accessGuard';
 import { translateDockerError } from './helpers/errorHandler';
 
@@ -72,6 +77,10 @@ export class Docker implements INodeType {
             name: 'System',
             value: 'system',
           },
+          {
+            name: 'Custom API Call',
+            value: 'custom',
+          },
         ],
         default: 'container',
       },
@@ -85,6 +94,8 @@ export class Docker implements INodeType {
       ...volumeFields,
       ...systemOperations,
       ...systemFields,
+      ...customApiOperations,
+      ...customApiFields,
     ],
   };
 
@@ -124,7 +135,14 @@ export class Docker implements INodeType {
     const resource = this.getNodeParameter('resource', 0) as string;
     const operation = this.getNodeParameter('operation', 0) as string;
 
-    enforceAccessMode(credentials, operation);
+    // A Custom API Call cannot be classified by name — whether it writes depends
+    // entirely on the HTTP method the user chose, so the guard is told which.
+    enforceAccessMode(credentials, operation, {
+      httpMethod:
+        operation === 'customApiCall'
+          ? (this.getNodeParameter('httpMethod', 0, 'GET') as string)
+          : undefined,
+    });
 
     const docker = createDockerClient(credentials);
     const returnData: INodeExecutionData[] = [];
@@ -132,7 +150,9 @@ export class Docker implements INodeType {
     for (let i = 0; i < items.length; i++) {
       try {
         const result =
-          resource === 'image'
+          resource === 'custom'
+            ? [{ json: await customApiCall.call(this, docker, i), pairedItem: i }]
+            : resource === 'image'
             ? await executeImageOperation.call(this, docker, operation, i)
             : resource === 'network' || resource === 'volume' || resource === 'system'
               ? await executeInfraOperation.call(this, docker, operation, i)

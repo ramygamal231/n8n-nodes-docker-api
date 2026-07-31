@@ -23,6 +23,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Custom API Call** — a deliberate escape hatch to any Docker Engine endpoint,
+  for anything this node does not cover or a newer Docker API than this release
+  knows about. The response is returned exactly as Docker sent it and is
+  explicitly marked `normalized: false`, in contrast to every other operation.
+  It reuses the configured transport, so it works identically on socket, TCP, TLS
+  and Portainer. Streaming endpoints are not supported here by design — use Get
+  Events or the Docker Trigger node instead of hanging a workflow.
+  - Read Only credentials permit `GET` and `HEAD`; any other method requires Full
+    Control, since a Custom API Call cannot be classified by name alone.
 - **New Docker Trigger node.** Starts a workflow when something happens in
   Docker — a container starting, dying, being killed, going out of memory or
   changing health status; an image being pulled or deleted; network and volume
@@ -103,6 +112,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `includeLabels` defaults to **off** for image listings: image labels commonly
     carry large vendor descriptions, and enabling them can make a single list
     item eleven times bigger.
+- **Endpoint-not-found errors are no longer reported as a missing container.**
+  Docker answers an unrecognised API path with "page not found", which a broad
+  match reported as "Container not found" — misleading when no container is
+  involved. Surfaced by the Custom API Call operation.
 - **Registry error messages.** A failed pull previously reported "the container
   or image may have been removed". Missing images, private repositories, expired
   credentials, unreachable registries, HTTP/HTTPS mismatches and images still in
