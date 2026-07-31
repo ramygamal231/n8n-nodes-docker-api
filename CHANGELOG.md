@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Package size reduced from 4.2 MB to 72 kB.** Documentation screenshots were
+  being copied into the published package, where nothing uses them — GitHub and
+  npm both resolve README images against the repository.
+- Get Container Logs no longer renders the Container ID field twice. It was
+  declared both in its own description and in the shared one covering every
+  operation that targets a container.
+- The container identifier now appears directly beneath Operation rather than
+  below the optional settings that modify it.
+
 ### BREAKING
 
 - **Container output is now identical regardless of which operation produced it.**

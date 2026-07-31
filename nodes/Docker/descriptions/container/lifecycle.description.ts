@@ -30,8 +30,16 @@ const TARGETED_OPERATIONS = [
 /** Operations that change state and therefore offer a dry run. */
 const DESTRUCTIVE_OPERATIONS = ['stop', 'restart', 'kill', 'remove', 'pruneContainers'];
 
+/**
+ * The target container, exported separately so it can be placed FIRST in the
+ * panel. n8n renders fields in array order, and appending it with the rest of the
+ * lifecycle fields pushed the required identifier below optional ones — Get
+ * Container Logs showed Tail, Timestamps and Stream before asking which container
+ * to read. The primary input belongs at the top.
+ */
+export const containerTargetField: INodeProperties = containerIdField(TARGETED_OPERATIONS);
+
 export const containerLifecycleFields: INodeProperties[] = [
-  containerIdField(TARGETED_OPERATIONS),
   timeoutField(['stop', 'restart']),
   {
     displayName: 'Signal',

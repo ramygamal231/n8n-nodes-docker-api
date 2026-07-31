@@ -2,7 +2,10 @@ import { INodeProperties } from 'n8n-workflow';
 
 import { listContainerFields } from './container/list.description';
 import { getLogsContainerFields } from './container/getLogs.description';
-import { containerLifecycleFields } from './container/lifecycle.description';
+import {
+  containerLifecycleFields,
+  containerTargetField,
+} from './container/lifecycle.description';
 import { createContainerFields } from './container/create.description';
 import { advancedContainerFields } from './container/advanced.description';
 
@@ -152,6 +155,10 @@ export const containerOperations: INodeProperties[] = [
 ];
 
 export const containerFields: INodeProperties[] = [
+  // The target container comes first: n8n renders fields in array order, and the
+  // required identifier should never appear below the optional settings that
+  // modify it.
+  containerTargetField,
   ...listContainerFields,
   ...getLogsContainerFields,
   ...createContainerFields,

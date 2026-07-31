@@ -1,21 +1,11 @@
 import { INodeProperties } from 'n8n-workflow';
 
+// The "Container ID or Name" field is NOT declared here. It comes from the
+// shared containerIdField() in lifecycle.description.ts, which covers every
+// operation that targets one container. Declaring it in both places rendered the
+// field twice in the panel — invisible to any test of behaviour, since the node
+// reads the parameter once regardless.
 export const getLogsContainerFields: INodeProperties[] = [
-  {
-    displayName: 'Container ID or Name',
-    name: 'containerId',
-    type: 'string',
-    required: true,
-    displayOptions: {
-      show: {
-        resource: ['container'],
-        operation: ['getLogs'],
-      },
-    },
-    default: '',
-    description: 'The ID or name of the container to retrieve logs from',
-    placeholder: 'my-container or abc123def456',
-  },
   {
     displayName: 'Tail (Lines)',
     name: 'tail',
