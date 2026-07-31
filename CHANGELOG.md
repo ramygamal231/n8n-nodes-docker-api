@@ -23,6 +23,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **New Docker Trigger node.** Starts a workflow when something happens in
+  Docker — a container starting, dying, being killed, going out of memory or
+  changing health status; an image being pulled or deleted; network and volume
+  lifecycle. Filters (event type, action, container, image, label) are pushed to
+  Docker rather than applied after the fact, so the daemon only sends what is
+  wanted.
+  - **Catches up on events missed while the workflow was not running.** Docker's
+    event stream is live-only, so a restart would otherwise silently lose
+    everything that happened while n8n was down. The last-seen event is persisted
+    with the workflow and replayed from on reconnect. Verified: an event fired
+    while the workflow was deactivated is delivered once it is reactivated.
+  - **Reconnects automatically** with capped exponential backoff. The event
+    stream dies for ordinary reasons — daemon restarts, socket hiccups, a laptop
+    sleeping — and a trigger that quietly stops listening is worse than none.
+  - **Never delivers the same event twice.** Docker's `since` parameter is
+    inclusive, so the boundary event is redelivered on every reconnect;
+    nanosecond timestamps are compared to filter it out. They are handled as
+    strings because they exceed the precision of a JavaScript number.
 - **Run Container (Ephemeral)** — create, run to completion, capture output and
   remove, in one operation. Returns exit code, stdout, stderr and duration. The
   container is cleaned up on every path including timeout, so a workflow that

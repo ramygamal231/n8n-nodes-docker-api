@@ -25,7 +25,7 @@
   ],
   "scripts": {
     "build": "tsc && npm run copy:assets",
-    "copy:assets": "npx copyfiles -u 1 -f \"nodes/Docker/docker.svg\" dist/nodes/Docker && npx copyfiles -u 1 -f \"credentials/docker.svg\" dist/credentials && npx copyfiles -u 1 \"assets/**/*\" dist/assets/",
+    "copy:assets": "npx copyfiles -u 1 -f \"nodes/Docker/docker.svg\" dist/nodes/Docker && npx copyfiles -u 1 -f \"nodes/DockerTrigger/docker.svg\" dist/nodes/DockerTrigger && npx copyfiles -u 1 -f \"credentials/docker.svg\" dist/credentials && npx copyfiles -u 1 \"assets/**/*\" dist/assets/",
     "dev": "tsc --watch",
     "format": "prettier nodes credentials --write",
     "lint": "eslint nodes credentials --ext .ts",
@@ -39,7 +39,8 @@
       "dist/credentials/DockerApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/Docker/Docker.node.js"
+      "dist/nodes/Docker/Docker.node.js",
+      "dist/nodes/DockerTrigger/DockerTrigger.node.js"
     ]
   },
   "engines": {

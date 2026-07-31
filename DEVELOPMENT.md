@@ -60,7 +60,28 @@ node C:\n8n-test\run-test.js --file C:\n8n-test\suite.json
 
 # one ad-hoc case
 node C:\n8n-test\run-test.js '{"name":"list","params":{"resource":"container","operation":"list","showAll":true}}'
+
+# every suite
+for f in suite phase1 phase2 phase3 phase4 phase5; do
+  node C:\n8n-test\run-test.js --file C:\n8n-test\$f.json
+done
 ```
+
+### Testing the trigger node
+
+A trigger is a workflow *entry point*, so it cannot be driven through a webhook
+like an operation. `C:\n8n-test\trigger-test.js` activates a workflow whose only
+node is the trigger, causes a real Docker event, and asserts that n8n created an
+execution carrying it.
+
+```bash
+node C:\n8n-test\trigger-test.js
+```
+
+It covers the two behaviours that are easy to get wrong and invisible when they
+break: **catch-up** (deactivate, cause an event, reactivate — the event must
+still arrive) and **no duplicate delivery** (Docker's `since` is inclusive, so
+the boundary event is redelivered on every reconnect and must be filtered out).
 
 Spec fields: `name`, `params` (node parameters), `credential` (`full` | `readonly`),
 `input` (webhook body), `expectError` (substring the node's error must contain),
