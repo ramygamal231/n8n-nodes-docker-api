@@ -13,8 +13,14 @@ import {
 import { createDockerClient } from '../../utils/dockerClient';
 import { containerOperations, containerFields } from './descriptions';
 import { imageOperations, imageFields } from './descriptions/image/image.description';
+import {
+  networkOperations, networkFields,
+  volumeOperations, volumeFields,
+  systemOperations, systemFields,
+} from './descriptions/infra.description';
 import { executeContainerOperation } from './actions';
 import { executeImageOperation } from './actions/imageIndex';
+import { executeInfraOperation } from './actions/infraIndex';
 import { enforceAccessMode } from './helpers/accessGuard';
 import { translateDockerError } from './helpers/errorHandler';
 
@@ -54,6 +60,18 @@ export class Docker implements INodeType {
             name: 'Image',
             value: 'image',
           },
+          {
+            name: 'Network',
+            value: 'network',
+          },
+          {
+            name: 'Volume',
+            value: 'volume',
+          },
+          {
+            name: 'System',
+            value: 'system',
+          },
         ],
         default: 'container',
       },
@@ -61,6 +79,12 @@ export class Docker implements INodeType {
       ...containerFields,
       ...imageOperations,
       ...imageFields,
+      ...networkOperations,
+      ...networkFields,
+      ...volumeOperations,
+      ...volumeFields,
+      ...systemOperations,
+      ...systemFields,
     ],
   };
 
@@ -110,7 +134,9 @@ export class Docker implements INodeType {
         const result =
           resource === 'image'
             ? await executeImageOperation.call(this, docker, operation, i)
-            : await executeContainerOperation.call(this, docker, operation, i);
+            : resource === 'network' || resource === 'volume' || resource === 'system'
+              ? await executeInfraOperation.call(this, docker, operation, i)
+              : await executeContainerOperation.call(this, docker, operation, i);
         returnData.push(...result);
       } catch (error) {
         if (this.continueOnFail()) {

@@ -23,6 +23,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **New Network resource** (7 operations): List, Inspect, Create, Connect
+  Container, Disconnect Container, Remove and Prune. Create supports a fixed
+  subnet and gateway, internal and attachable networks, and IPv6. Connect
+  supports a DNS alias.
+- **New Volume resource** (5 operations): List, Inspect, Create, Remove and
+  Prune, all with usage information where Docker provides it.
+- **New System resource** (5 operations): Get Info, Get Version, Ping, Get Disk
+  Usage and Get Events.
+  - **Get Events reads a bounded window and always terminates.** Docker's events
+    endpoint streams indefinitely when given no end time, which hangs a workflow
+    forever. An end time is always sent. Continuous watching belongs in a trigger
+    node, not an operation.
+  - **Get Disk Usage** reports images, containers, volumes and build cache with
+    counts, sizes in MB, and how much is reclaimable.
+  - **Ping** returns reachability and round-trip latency.
+- **Empty results now say whether they mean "none" or "not looked up".** Docker's
+  network list never returns attached containers while inspect does, so an empty
+  container list meant two different things depending on the call. Network output
+  carries `containersEnumerated`, and volume output carries `usageKnown` for the
+  same reason — Docker signals "size not calculated" with `-1`, which is neither
+  zero nor unknown-shaped. Dry runs state the limitation in words too.
 - **New Image resource with nine operations**: List, Inspect, Get History,
   Search, Pull, Push, Tag, Remove and Prune.
   - **Pull and Push** consume Docker's progress stream to completion and return a
