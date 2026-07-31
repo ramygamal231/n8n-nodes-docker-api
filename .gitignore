@@ -8,3 +8,9 @@ coverage/
 
 # Development planning documents
 n8n-docker-node-plan.md
+
+# Local MCP config - contains a local n8n API key, do not commit
+.mcp.json
+
+# Competitor source, kept locally for analysis only
+inspiration/
