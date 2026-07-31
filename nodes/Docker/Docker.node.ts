@@ -1,5 +1,9 @@
 import {
+  ICredentialDataDecryptedObject,
+  ICredentialsDecrypted,
+  ICredentialTestFunctions,
   IExecuteFunctions,
+  INodeCredentialTestResult,
   INodeExecutionData,
   INodeType,
   INodeTypeDescription,
@@ -10,6 +14,7 @@ import { createDockerClient } from '../../utils/dockerClient';
 import { containerOperations, containerFields } from './descriptions';
 import { executeContainerOperation } from './actions';
 import { enforceAccessMode } from './helpers/accessGuard';
+import { translateDockerError } from './helpers/errorHandler';
 
 export class Docker implements INodeType {
   description: INodeTypeDescription = {
@@ -29,6 +34,7 @@ export class Docker implements INodeType {
       {
         name: 'dockerApi',
         required: true,
+        testedBy: 'dockerApiTest',
       },
     ],
     properties: [
@@ -48,6 +54,36 @@ export class Docker implements INodeType {
       ...containerOperations,
       ...containerFields,
     ],
+  };
+
+  methods = {
+    credentialTest: {
+      /**
+       * Backs the "Test Connection" button. Uses a method rather than a
+       * declarative ICredentialTestRequest because socket mode talks to a Unix
+       * socket or Windows named pipe, which n8n's HTTP-based declarative test
+       * cannot reach.
+       */
+      async dockerApiTest(
+        this: ICredentialTestFunctions,
+        credential: ICredentialsDecrypted,
+      ): Promise<INodeCredentialTestResult> {
+        try {
+          const docker = createDockerClient(
+            credential.data as ICredentialDataDecryptedObject,
+          );
+          await docker.ping();
+          const version = await docker.version();
+          const mode = (credential.data as ICredentialDataDecryptedObject)?.authMode ?? 'socket';
+          return {
+            status: 'OK',
+            message: `Connected to Docker ${version.Version} (API ${version.ApiVersion}) via ${mode}.`,
+          };
+        } catch (error) {
+          return { status: 'Error', message: translateDockerError(error) };
+        }
+      },
+    },
   };
 
   async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {

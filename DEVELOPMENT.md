@@ -106,7 +106,37 @@ agent-browser screenshot panel.png
 
 Fixture containers (all labelled `n8ntest=true`, safe to `docker rm`):
 `n8ntest-logger` (stdout+stderr, no TTY), `n8ntest-tty` (TTY), `n8ntest-ports`
-(published tcp+udp ports), `n8ntest-stopped` (start/stop target).
+(published tcp+udp ports), `n8ntest-stopped` (start/stop target),
+`n8ntest-portainer` (Portainer CE, for the Portainer transport).
+
+`C:\n8n-test\fixtures.js` defines the canonical state of each and is run
+automatically before every suite. Specs that start or stop containers otherwise
+leave the host dirty and make suites order-dependent — running `phase1.json`
+before `suite.json` used to fail `start: n8ntest-stopped` with "Container is
+already running". Reset manually with `node C:\n8n-test\fixtures.js`.
+
+### Known harness limitation: credential tests cannot be verified here
+
+n8n only populates a credential's `supportedNodes` for nodes loaded as **npm
+packages**. Our node loads from the **custom directory**, so:
+
+```
+dockerApi    supportedNodes: undefined        <- our node, custom-dir load
+portainerApi supportedNodes: ["n8n-nodes-docker.docker", ...]   <- npm package
+```
+
+`CredentialsTester.getCredentialTestFunction()` iterates `getSupportedNodes()`,
+finds nothing, and returns *"No testing function found for this credential."*
+The `testedBy` + `methods.credentialTest` implementation is correct per n8n's
+contract — it simply cannot resolve in this load mode.
+
+Installing the packed tarball into `.n8n/nodes/` does not help: n8n loads
+community packages from the `installed_packages` DB table, which only its
+registry-based install flow populates.
+
+**Therefore the Test Connection button must be verified on a release candidate**,
+published to npm and installed through n8n's Community Nodes UI, before 1.0.0
+ships. Everything else is verifiable here.
 
 ## Project Structure
 

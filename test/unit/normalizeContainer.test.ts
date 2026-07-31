@@ -149,7 +149,7 @@ describe('normalizeContainerInfo', () => {
     expect(normalized.labels).toEqual({ 'com.example.service': 'web', 'com.example.env': 'prod' });
   });
 
-  it('excludes labels when includeLabels is false', () => {
+  it('empties labels when includeLabels is false, but keeps the key present', () => {
     const raw = {
       Names: ['/test'],
       Id: 'abc123def456',
@@ -161,7 +161,12 @@ describe('normalizeContainerInfo', () => {
     } as any;
 
     const normalized = normalizeContainerInfo(raw, false);
-    expect(normalized.labels).toBeUndefined();
+    // BREAKING CHANGE from v0.1.1, which omitted the key entirely.
+    // A field that sometimes disappears breaks downstream IF/Switch nodes, which
+    // is precisely the inconsistency this normaliser exists to prevent. The key
+    // is always present; suppressing labels empties it.
+    expect(normalized).toHaveProperty('labels');
+    expect(normalized.labels).toEqual({});
   });
 
   it('handles missing labels gracefully', () => {

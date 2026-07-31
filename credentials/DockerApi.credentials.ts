@@ -1,12 +1,23 @@
 import {
   ICredentialType,
   INodeProperties,
+  Icon,
 } from 'n8n-workflow';
+
+/**
+ * The Unix socket path is meaningless on Windows, where Docker Desktop exposes a
+ * named pipe instead. Resolved from the host n8n is running on so the default is
+ * correct out of the box rather than a guaranteed connection error.
+ */
+const defaultSocketPath =
+  process.platform === 'win32' ? '//./pipe/docker_engine' : '/var/run/docker.sock';
 
 export class DockerApi implements ICredentialType {
   name = 'dockerApi';
   displayName = 'Docker API';
   documentationUrl = 'https://github.com/ramygamal231/n8n-nodes-docker-api';
+  icon: Icon = 'file:docker.svg';
+
   properties: INodeProperties[] = [
     {
       displayName: 'Connection Mode',
@@ -14,38 +25,48 @@ export class DockerApi implements ICredentialType {
       type: 'options',
       options: [
         {
-          name: 'Unix Socket (Local)',
+          name: 'Unix Socket / Named Pipe (Local)',
           value: 'socket',
-          description: 'Connect to Docker via local Unix socket',
+          description: 'Connect to a Docker daemon on the same machine as n8n',
         },
         {
-          name: 'TCP (Remote)',
+          name: 'TCP (Remote, Unencrypted)',
           value: 'tcp',
-          description: 'Connect to a remote Docker daemon over TCP',
+          description: 'Connect to a remote Docker daemon over plain HTTP',
         },
         {
-          name: 'TLS (Secure Remote)',
+          name: 'TLS (Remote, Secure)',
           value: 'tls',
-          description: 'Connect to a remote Docker daemon with TLS authentication',
+          description: 'Connect to a remote Docker daemon with TLS client certificates',
+        },
+        {
+          name: 'Portainer',
+          value: 'portainer',
+          description: 'Connect through an existing Portainer instance, which proxies the Docker API',
         },
       ],
       default: 'socket',
     },
-    // --- Socket mode fields ---
+
+    // --- Socket mode -------------------------------------------------------
     {
       displayName: 'Socket Path',
       name: 'socketPath',
       type: 'string',
-      default: '/var/run/docker.sock',
+      default: defaultSocketPath,
+      required: true,
       displayOptions: { show: { authMode: ['socket'] } },
-      description: 'Path to the Docker Unix socket',
+      description:
+        'Path to the Docker socket. On Linux and macOS this is normally /var/run/docker.sock. On Windows, Docker Desktop uses the named pipe //./pipe/docker_engine.',
     },
-    // --- TCP mode fields ---
+
+    // --- TCP mode ----------------------------------------------------------
     {
       displayName: 'Host',
       name: 'host',
       type: 'string',
       default: '',
+      required: true,
       placeholder: '192.168.1.100',
       displayOptions: { show: { authMode: ['tcp', 'tls'] } },
       description: 'IP address or hostname of the Docker host',
@@ -55,17 +76,29 @@ export class DockerApi implements ICredentialType {
       name: 'port',
       type: 'number',
       default: 2375,
+      required: true,
       displayOptions: { show: { authMode: ['tcp'] } },
-      description: 'Docker daemon TCP port (default: 2375)',
+      description: 'Docker daemon TCP port. The conventional unencrypted port is 2375.',
     },
-    // --- TLS mode fields (v2 implementation, schema defined now) ---
+    {
+      displayName: 'Unencrypted Connection Warning',
+      name: 'tcpNotice',
+      type: 'notice',
+      default: '',
+      displayOptions: { show: { authMode: ['tcp'] } },
+      description:
+        '⚠️ TCP mode sends Docker API traffic unencrypted and unauthenticated. Anyone who can reach this port has full control of the Docker host. Use it only on a trusted private network — prefer TLS mode otherwise.',
+    },
+
+    // --- TLS mode ----------------------------------------------------------
     {
       displayName: 'TLS Port',
       name: 'tlsPort',
       type: 'number',
       default: 2376,
+      required: true,
       displayOptions: { show: { authMode: ['tls'] } },
-      description: 'Docker daemon TLS port (default: 2376)',
+      description: 'Docker daemon TLS port. The conventional encrypted port is 2376.',
     },
     {
       displayName: 'CA Certificate',
@@ -74,7 +107,8 @@ export class DockerApi implements ICredentialType {
       typeOptions: { rows: 4 },
       default: '',
       displayOptions: { show: { authMode: ['tls'] } },
-      description: 'TLS CA certificate (PEM format)',
+      description:
+        'PEM-encoded CA certificate used to verify the daemon. Leave empty if the daemon certificate is signed by a publicly trusted CA.',
     },
     {
       displayName: 'Client Certificate',
@@ -82,8 +116,9 @@ export class DockerApi implements ICredentialType {
       type: 'string',
       typeOptions: { rows: 4 },
       default: '',
+      required: true,
       displayOptions: { show: { authMode: ['tls'] } },
-      description: 'TLS client certificate (PEM format)',
+      description: 'PEM-encoded client certificate (cert.pem)',
     },
     {
       displayName: 'Client Key',
@@ -91,10 +126,54 @@ export class DockerApi implements ICredentialType {
       type: 'string',
       typeOptions: { rows: 4, password: true },
       default: '',
+      required: true,
       displayOptions: { show: { authMode: ['tls'] } },
-      description: 'TLS client private key (PEM format)',
+      description: 'PEM-encoded client private key (key.pem)',
     },
-    // --- Access control ---
+    {
+      displayName: 'Skip Certificate Verification',
+      name: 'skipTlsVerify',
+      type: 'boolean',
+      default: false,
+      displayOptions: { show: { authMode: ['tls'] } },
+      description:
+        'Whether to accept the daemon certificate without verifying it. Only enable for self-signed certificates on a trusted network; it removes protection against man-in-the-middle attacks.',
+    },
+
+    // --- Portainer mode ----------------------------------------------------
+    {
+      displayName: 'Portainer URL',
+      name: 'portainerUrl',
+      type: 'string',
+      default: '',
+      required: true,
+      placeholder: 'https://portainer.example.com',
+      displayOptions: { show: { authMode: ['portainer'] } },
+      description: 'Base URL of your Portainer instance, without a trailing path',
+    },
+    {
+      displayName: 'Access Token',
+      name: 'portainerAccessToken',
+      type: 'string',
+      typeOptions: { password: true },
+      default: '',
+      required: true,
+      displayOptions: { show: { authMode: ['portainer'] } },
+      description:
+        'Portainer API access token, created under My Account → Access Tokens. Sent as the X-API-Key header.',
+    },
+    {
+      displayName: 'Environment ID',
+      name: 'portainerEndpointId',
+      type: 'number',
+      default: 1,
+      required: true,
+      displayOptions: { show: { authMode: ['portainer'] } },
+      description:
+        'ID of the Portainer environment (endpoint) to control. Visible in the Portainer URL when you open an environment; the first local environment is usually 1.',
+    },
+
+    // --- Access control ----------------------------------------------------
     {
       displayName: 'Access Mode',
       name: 'accessMode',
@@ -103,22 +182,24 @@ export class DockerApi implements ICredentialType {
         {
           name: 'Read Only',
           value: 'readonly',
-          description: 'Only list and inspect operations are allowed',
+          description: 'Only listing, inspection and log operations are permitted',
         },
         {
           name: 'Full Control',
           value: 'full',
-          description: 'All operations including start, stop, and remove are allowed',
+          description: 'All operations, including creating, starting, stopping and removing',
         },
       ],
       default: 'readonly',
-      description: 'Controls which operations this credential permits',
+      description: 'Which operations this credential permits, enforced at run time',
     },
     {
-      displayName: '',
+      displayName: 'Security Notice',
       name: 'securityNotice',
       type: 'notice',
-      default: '⚠️ This credential connects to the Docker daemon. Full Control mode grants the ability to start, stop, and remove containers. Use Read Only mode unless write access is explicitly required.',
+      default: '',
+      description:
+        '⚠️ This credential controls the Docker daemon, which is equivalent to root access on the host. Use Read Only unless write access is genuinely required.',
     },
   ];
 }

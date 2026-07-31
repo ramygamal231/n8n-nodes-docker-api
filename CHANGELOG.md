@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### BREAKING
+
+- **Container output is now identical regardless of which operation produced it.**
+  Previously `list` and `start`/`stop` returned different shapes for the same
+  container. Specifically:
+  - `ports` is now populated on `start`/`stop` (previously always `[]`, because
+    the code read the list-response field, while inspect responses carry ports
+    under `NetworkSettings.Ports`).
+  - `createdAt` is always ISO-8601 with milliseconds. The inspect path previously
+    leaked Docker's raw nanosecond string, e.g. `2026-07-31T13:42:39.344492418Z`.
+  - `labels` now honours `includeLabels` on every path, and the key is **always
+    present** — suppressing labels yields `{}` rather than omitting the field.
+    A field that sometimes disappears breaks downstream IF/Switch nodes.
+
+### Added
+
+- **Portainer connection mode.** Docker can now be reached through an existing
+  Portainer instance, alongside socket, TCP and TLS. All four modes are served by
+  a single client, so every operation works identically on each.
+- **TLS connection mode implemented.** The credential schema has advertised TLS
+  since 0.1.0 without an implementation. Includes optional CA, required client
+  certificate and key, and an opt-in switch to skip certificate verification for
+  self-signed setups.
+- **Test Connection support** on the Docker API credential (`docker.ping()` plus a
+  version probe), reporting the daemon version and connection mode on success and
+  a human-readable reason on failure.
+- **Credential icon** — the credential previously rendered as a grey placeholder.
+- Required-field validation on credentials. Connection fields are now marked
+  required per mode, so a TCP credential can no longer be saved with an empty host.
+- Platform-aware default socket path: Windows hosts now default to
+  `//./pipe/docker_engine` instead of a Unix path that could never connect.
+
+### Changed
+
+- **The access guard is now an allowlist and fails closed.** It previously listed
+  known write operations, so any operation added without updating that list would
+  have been silently available to Read Only credentials. Unrecognised operations
+  are now denied by default. A Custom API Call is classified by its HTTP method.
+
 ### Fixed
 
 - **Container logs from TTY containers returned nothing.** Containers started with
