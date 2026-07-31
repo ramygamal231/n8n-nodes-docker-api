@@ -4,6 +4,7 @@ import { listContainerFields } from './container/list.description';
 import { getLogsContainerFields } from './container/getLogs.description';
 import { containerLifecycleFields } from './container/lifecycle.description';
 import { createContainerFields } from './container/create.description';
+import { advancedContainerFields } from './container/advanced.description';
 
 export const containerOperations: INodeProperties[] = [
   {
@@ -49,6 +50,48 @@ export const containerOperations: INodeProperties[] = [
         action: 'Get filesystem changes',
       },
       // --- lifecycle ---
+      {
+        name: 'Run Container (Ephemeral)',
+        value: 'run',
+        description: 'Create, run to completion, capture output and remove — in one step',
+        action: 'Run container',
+      },
+      {
+        name: 'Execute Command',
+        value: 'executeCommand',
+        description: 'Run a command inside a container and capture stdout, stderr and exit code',
+        action: 'Execute command in container',
+      },
+      {
+        name: 'Wait For State',
+        value: 'waitForState',
+        description: 'Block until a container is running, healthy or exited',
+        action: 'Wait for container state',
+      },
+      {
+        name: 'Get Stats',
+        value: 'stats',
+        description: 'CPU, memory, network and disk usage as human-readable numbers',
+        action: 'Get container stats',
+      },
+      {
+        name: 'Copy From Container',
+        value: 'copyFrom',
+        description: 'Read a file out of a container as binary data',
+        action: 'Copy file from container',
+      },
+      {
+        name: 'Copy To Container',
+        value: 'copyTo',
+        description: 'Write binary data into a container as a file',
+        action: 'Copy file to container',
+      },
+      {
+        name: 'Prune Containers',
+        value: 'pruneContainers',
+        description: 'Delete stopped containers, with a preview',
+        action: 'Prune containers',
+      },
       {
         name: 'Create Container',
         value: 'create',
@@ -113,4 +156,5 @@ export const containerFields: INodeProperties[] = [
   ...getLogsContainerFields,
   ...createContainerFields,
   ...containerLifecycleFields,
+  ...advancedContainerFields,
 ];

@@ -23,6 +23,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Run Container (Ephemeral)** — create, run to completion, capture output and
+  remove, in one operation. Returns exit code, stdout, stderr and duration. The
+  container is cleaned up on every path including timeout, so a workflow that
+  fails midway does not leave containers behind. An overrunning container is
+  stopped and its output up to that point is still returned.
+- **Execute Command** — runs a command inside a container and returns
+  `{ stdout, stderr, exitCode }` from a single operation, rather than the three
+  separate API calls Docker requires.
+- **Wait For Container State** — blocks until a container is running, healthy or
+  exited, with a timeout. Docker's own wait endpoint only handles *exited*;
+  waiting for *healthy* is what deploy-then-verify workflows actually need.
+  Waiting for health on an image with no HEALTHCHECK fails immediately with an
+  explanation instead of spinning until the timeout.
+- **Copy To / From Container** — file transfer through n8n's binary data system.
+  A single file is unwrapped from Docker's tar so the user deals in files;
+  directories are returned as a tar with a clear error explaining why one binary
+  output cannot represent many files.
+- **Get Container Stats** — CPU percentage, memory in MB and percent, network and
+  block IO, and process count. Docker reports raw cumulative counters; the
+  percentage is derived from the sample delta, and page cache is subtracted from
+  memory so a container that has merely read files does not appear to be
+  consuming it.
+- **Prune Containers** with a dry-run preview listing exactly what would go.
 - **New Network resource** (7 operations): List, Inspect, Create, Connect
   Container, Disconnect Container, Remove and Prune. Create supports a fixed
   subnet and gateway, internal and attachable networks, and IPv6. Connect

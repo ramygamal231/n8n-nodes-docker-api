@@ -20,10 +20,15 @@ const TARGETED_OPERATIONS = [
   'getLogs',
   'top',
   'changes',
+  'executeCommand',
+  'waitForState',
+  'stats',
+  'copyFrom',
+  'copyTo',
 ];
 
 /** Operations that change state and therefore offer a dry run. */
-const DESTRUCTIVE_OPERATIONS = ['stop', 'restart', 'kill', 'remove'];
+const DESTRUCTIVE_OPERATIONS = ['stop', 'restart', 'kill', 'remove', 'pruneContainers'];
 
 export const containerLifecycleFields: INodeProperties[] = [
   containerIdField(TARGETED_OPERATIONS),

@@ -12,6 +12,14 @@ import {
   topContainer,
 } from './container/manage.operation';
 import { LifecycleAction, runLifecycleOperation } from './container/lifecycle.operation';
+import {
+  containerStats,
+  executeCommand,
+  pruneContainers,
+  runContainer,
+  waitForState,
+} from './container/advanced.operation';
+import { copyFromContainer, copyToContainer } from './container/copy.operation';
 
 const LIFECYCLE_ACTIONS: LifecycleAction[] = [
   'start',
@@ -41,6 +49,12 @@ const SINGLE_RESULT_OPERATIONS: Record<
   rename: renameContainer,
   top: topContainer,
   changes: containerChanges,
+  executeCommand,
+  waitForState,
+  run: runContainer,
+  stats: containerStats,
+  pruneContainers,
+  copyTo: copyToContainer,
 };
 
 export async function executeContainerOperation(
@@ -52,6 +66,12 @@ export async function executeContainerOperation(
   if (operation === 'list') {
     const results = await listContainers.call(this, docker, itemIndex);
     return results.map((item) => ({ json: item, pairedItem: itemIndex }));
+  }
+
+  // copyFrom is the only operation returning binary data, so it builds its own
+  // INodeExecutionData rather than going through the json-only path.
+  if (operation === 'copyFrom') {
+    return [await copyFromContainer.call(this, docker, itemIndex)];
   }
 
   if (isLifecycle(operation)) {

@@ -49,6 +49,7 @@
     "@types/dockerode": "^4.0.1",
     "@types/jest": "^30.0.0",
     "@types/node": "^18.0.0",
+    "@types/tar-stream": "^3.1.4",
     "@typescript-eslint/eslint-plugin": "^8.57.2",
     "@typescript-eslint/parser": "^8.57.2",
     "copyfiles": "^2.4.1",
@@ -61,7 +62,8 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "dockerode": "^4.0.0"
+    "dockerode": "^4.0.0",
+    "tar-stream": "^2.2.0"
   },
   "peerDependencies": {
     "n8n-workflow": "*"
