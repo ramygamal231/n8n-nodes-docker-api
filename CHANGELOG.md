@@ -23,6 +23,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Nine new container operations**, bringing the container resource to fifteen:
+  Inspect, Create, Restart, Kill, Pause, Unpause, Rename, Remove, List Processes
+  and Get Filesystem Changes.
+  - **Inspect** returns health status, exit code, restart count, start and finish
+    times, restart policy, resource limits, network addresses, mounts, and
+    environment variables as an object rather than a `KEY=value` array.
+  - **Create** builds port, volume, environment and label mappings from
+    structured fields instead of hand-written JSON, and can start the container in
+    the same step. Commands are parsed with quote awareness, so
+    `sh -c "echo hello world"` stays three arguments rather than five.
+  - **List Processes** zips Docker's parallel title and row arrays into objects,
+    so a workflow can reference `process.pid` instead of `process[1]`.
+  - **Get Filesystem Changes** handles Docker returning a literal `null` for an
+    unchanged filesystem rather than an empty list.
+  - Dry run is available on every destructive operation (Stop, Restart, Kill,
+    Remove) and returns an identical payload shape across all of them.
 - **Portainer connection mode.** Docker can now be reached through an existing
   Portainer instance, alongside socket, TCP and TLS. All four modes are served by
   a single client, so every operation works identically on each.
