@@ -19,6 +19,22 @@ export function translateDockerError(error: unknown): string {
       'and requires registry credentials.'
     );
   }
+  // A 401 from the API itself means the connection credential is wrong — most
+  // often an expired or mistyped Portainer access token. Docker's own socket and
+  // TCP transports never return this, so it is specific to a proxied connection.
+  // Portainer phrases it "Invalid JWT token", which matches none of the usual
+  // wordings and previously leaked out raw as "(HTTP code 401) unexpected - ...".
+  if (
+    lower.includes('invalid jwt') ||
+    lower.includes('jwt token') ||
+    lower.includes('http code 401') ||
+    lower.includes('(401)')
+  ) {
+    return (
+      'Authentication failed. The access token was rejected — check it is correct and ' +
+      'has not expired, and that it has access to the selected environment.'
+    );
+  }
   if (lower.includes('unauthorized') || lower.includes('authentication required')) {
     return (
       'Registry authentication failed. Add registry credentials under Additional Fields, ' +

@@ -136,7 +136,45 @@ leave the host dirty and make suites order-dependent — running `phase1.json`
 before `suite.json` used to fail `start: n8ntest-stopped` with "Container is
 already running". Reset manually with `node C:\n8n-test\fixtures.js`.
 
-### Known harness limitation: credential tests cannot be verified here
+### Verifying the credential Test Connection button
+
+**Status: verified working** (2026-08-01) across socket, TCP, TLS and Portainer,
+including the failure paths.
+
+This one cannot be tested in the normal custom-directory setup — see the section
+below for why — so it is verified by loading the node the way a real user gets
+it. The procedure, for repeating before a release:
+
+```bash
+# 1. pack the current build
+npm pack --pack-destination C:\n8n-test
+
+# 2. install it (npm errors inside .n8n/nodes, so stage it elsewhere first)
+mkdir C:\n8n-test\stage && cd C:\n8n-test\stage && npm init -y
+npm install C:\n8n-test\n8n-nodes-docker-api-<version>.tgz
+cp -r node_modules/. C:\n8n-test\.n8n\nodes\node_modules\
+
+# 3. register it, since n8n loads community packages from the DB, not from disk
+#    INSERT INTO installed_packages (packageName, installedVersion, ...)
+#    INSERT INTO installed_nodes    (name, type, latestVersion, package)
+#      types: n8n-nodes-docker-api.docker, n8n-nodes-docker-api.dockerTrigger
+
+# 4. move the custom-dir symlink OUT of .n8n so nothing registers twice, restart
+
+# 5. POST /rest/credentials/test with each connection mode
+```
+
+Confirm `supportedNodes` is populated before testing — that is the thing custom-dir
+loading does not provide:
+
+```
+dockerApi supportedNodes: ["n8n-nodes-docker-api.docker","n8n-nodes-docker-api.dockerTrigger"]
+```
+
+Afterwards, remove the package, delete the DB rows and restore the custom-dir
+symlink to get live reload back.
+
+### Why the custom directory cannot test it
 
 n8n only populates a credential's `supportedNodes` for nodes loaded as **npm
 packages**. Our node loads from the **custom directory**, so:

@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- A rejected Portainer access token now produces a readable message instead of
+  leaking Docker's raw `(HTTP code 401) unexpected - Invalid JWT token`.
+
 - **Package size reduced from 4.2 MB to 72 kB.** Documentation screenshots were
   being copied into the published package, where nothing uses them — GitHub and
   npm both resolve README images against the repository.

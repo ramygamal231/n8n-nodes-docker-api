@@ -100,3 +100,32 @@ describe('translateDockerError — endpoint vs container (v1.0.0)', () => {
     );
   });
 });
+
+describe('translateDockerError — proxied-connection auth (v1.0.0)', () => {
+  it('REGRESSION: a rejected Portainer token is translated, not leaked raw', () => {
+    // Portainer phrases this "Invalid JWT token", matching none of the usual
+    // wordings, so it previously surfaced as the raw
+    // "(HTTP code 401) unexpected - Invalid JWT token".
+    const result = translateDockerError(
+      new Error('(HTTP code 401) unexpected - Invalid JWT token '),
+    );
+    expect(result).toContain('Authentication failed');
+    expect(result).toContain('expired');
+    expect(result).not.toContain('HTTP code 401');
+  });
+
+  it('covers other 401 phrasings', () => {
+    expect(translateDockerError(new Error('jwt token is invalid'))).toContain(
+      'Authentication failed',
+    );
+    expect(translateDockerError(new Error('request failed (401)'))).toContain(
+      'Authentication failed',
+    );
+  });
+
+  it('still routes registry auth failures to the registry message', () => {
+    expect(translateDockerError(new Error('unauthorized: authentication required'))).toContain(
+      'Registry authentication failed',
+    );
+  });
+});
