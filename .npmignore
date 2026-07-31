@@ -28,3 +28,6 @@ node_modules/
 
 # Build artifacts
 dist/**/*.map
+
+# Planning docs
+docs/

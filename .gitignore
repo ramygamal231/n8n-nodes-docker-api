@@ -14,3 +14,6 @@ n8n-docker-node-plan.md
 
 # Competitor source, kept locally for analysis only
 inspiration/
+
+# Internal-only notes (competitive analysis) - not for the public repo
+docs/internal/
