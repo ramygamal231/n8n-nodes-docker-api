@@ -6,7 +6,7 @@ import { translateDockerError } from '../../helpers/errorHandler';
 import { normalizeImageInfo } from '../../helpers/normalizeImage';
 import { sizeToMb } from '../../helpers/normalizePrimitives';
 import { packTar } from '../../helpers/tarUtils';
-import { followProgress, summarizeProgress } from './registry.operation';
+import { followProgress, ProgressStreamError, summarizeProgress } from './registry.operation';
 import { resolveTarget } from '../../helpers/containerTarget';
 
 interface KeyValueEntry {
@@ -115,7 +115,55 @@ export async function buildImage(
       durationMs: Date.now() - startedAt,
     };
   } catch (error) {
-    throw new Error(translateDockerError(error));
+    const removed = await cleanUpFailedBuild(docker, error);
+    const base = translateDockerError(error);
+    throw new Error(removed ? `${base} ${removed}` : base);
+  }
+}
+
+/** The `---> Running in <id>` line Docker emits before each build step. */
+const RUNNING_IN = /--->\s*Running in ([0-9a-f]{8,64})/g;
+
+/**
+ * Removes the container a failed build left behind.
+ *
+ * Docker's classic builder runs each step in a throwaway container and deletes it
+ * once the step succeeds. When a step fails it keeps that container instead, so
+ * you can attach to it and work out why — which is a sensible default at a
+ * terminal, and the wrong one here. Nobody is watching a scheduled workflow, and
+ * a build that fails every night quietly accumulates a container per run until
+ * the disk fills. Each one is invisible in the node's output, since the build
+ * reported an error and returned nothing.
+ *
+ * The container is created by this build and referenced by nothing else, so
+ * removing it is safe. Failure to remove it is reported rather than swallowed —
+ * a leak the user is told about can be cleaned up; a silent one cannot.
+ */
+async function cleanUpFailedBuild(docker: Docker, error: unknown): Promise<string | null> {
+  const events = error instanceof ProgressStreamError ? error.events : [];
+  if (!events.length) return null;
+
+  const log = events
+    .map((e) => (e as { stream?: string }).stream)
+    .filter((s): s is string => typeof s === 'string')
+    .join('');
+
+  // The last one is the step that failed; earlier steps removed their own.
+  const ids = [...log.matchAll(RUNNING_IN)].map((m) => m[1]);
+  const id = ids[ids.length - 1];
+  if (!id) return null;
+
+  try {
+    await docker.getContainer(id).remove({ force: true });
+    return `The container from the failed build step was removed (${id.slice(0, 12)}).`;
+  } catch (removeError) {
+    // A 404 means Docker already cleaned it up — nothing was leaked, so there is
+    // nothing worth telling the user about.
+    if ((removeError as { statusCode?: number })?.statusCode === 404) return null;
+    return (
+      `The build also left a container behind (${id.slice(0, 12)}) which could not be ` +
+      `removed automatically — remove it manually to reclaim the space.`
+    );
   }
 }
 

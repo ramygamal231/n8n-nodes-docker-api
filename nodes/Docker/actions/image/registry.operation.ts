@@ -35,6 +35,24 @@ export interface ProgressSummary {
  *     as a callback error, so the events themselves must be inspected. Missing
  *     this reports a failed pull as a success.
  */
+/**
+ * A stream failure that still carries everything received before it failed.
+ *
+ * A build reports the intermediate container it is running each step in, and
+ * that container is the only handle on what a failed build left behind. Throwing
+ * a plain Error discards it along with the rest of the log, so the caller cannot
+ * clean up after itself.
+ */
+export class ProgressStreamError extends Error {
+  constructor(
+    message: string,
+    readonly events: ProgressEvent[],
+  ) {
+    super(message);
+    this.name = 'ProgressStreamError';
+  }
+}
+
 export function followProgress(
   docker: Docker,
   stream: Readable,
@@ -43,11 +61,14 @@ export function followProgress(
     docker.modem.followProgress(
       stream,
       (err: Error | null, output: ProgressEvent[]) => {
-        if (err) return reject(err);
+        if (err) return reject(new ProgressStreamError(err.message, output ?? []));
         const failure = (output ?? []).find((e) => e.error);
         if (failure) {
           return reject(
-            new Error(failure.errorDetail?.message ?? failure.error ?? 'Unknown registry error'),
+            new ProgressStreamError(
+              failure.errorDetail?.message ?? failure.error ?? 'Unknown registry error',
+              output ?? [],
+            ),
           );
         }
         resolve({ events: output ?? [] });

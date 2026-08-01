@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   not exist — revealing which private repositories exist would be a leak — so
   reporting only "authentication failed" sent people hunting for a credential
   problem when they had simply mistyped the repository name.
+- **A failed build no longer leaves a container behind.** Docker's builder runs
+  each step in a throwaway container and keeps it when a step fails, so you can
+  attach and debug — sensible at a terminal, wrong in a workflow. Nobody is
+  watching a scheduled run, and a build that fails every night accumulated one
+  container per run until the disk filled, invisibly, since the operation
+  reported an error and returned nothing. The container is now removed and the
+  removal is stated in the error message. If it cannot be removed, that is
+  reported too, rather than leaking silently.
 - A malformed image reference now says the reference is invalid, rather than
   surfacing Node's `Request path contains unescaped characters`, which describes
   the HTTP client's internals and never mentions the name the user typed.
