@@ -1,0 +1,191 @@
+{
+  "name": "Self-healing containers with escalation",
+  "nodes": [
+    {
+      "parameters": {
+        "eventTypes": ["container"],
+        "actions": ["die"],
+        "filters": { "label": "selfheal=true" },
+        "catchUp": true
+      },
+      "id": "b1000000-0000-4000-8000-000000000001",
+      "name": "A container died",
+      "type": "n8n-nodes-docker-api.dockerTrigger",
+      "typeVersion": 1,
+      "position": [-660, 0],
+      "notes": "Opt in per container with the label selfheal=true, so this never touches something you did not mean it to. Catch-up is on: a container that dies while n8n itself is restarting is still handled, which is exactly when it tends to happen."
+    },
+    {
+      "parameters": {
+        "resource": "container",
+        "operation": "getLogs",
+        "containerId": "={{ $json.name }}",
+        "tail": 50,
+        "stream": "both",
+        "timestamps": true,
+        "sinceMinutes": 0
+      },
+      "id": "b1000000-0000-4000-8000-000000000002",
+      "name": "Capture logs BEFORE restarting",
+      "type": "n8n-nodes-docker-api.docker",
+      "typeVersion": 1,
+      "position": [-440, 0],
+      "onError": "continueRegularOutput",
+      "notes": "Taken first, deliberately. Restarting can rotate or discard the very output that explains the crash, so the evidence is collected while it still exists."
+    },
+    {
+      "parameters": {
+        "resource": "container",
+        "operation": "inspect",
+        "containerId": "={{ $('A container died').item.json.name }}"
+      },
+      "id": "b1000000-0000-4000-8000-000000000003",
+      "name": "How many times has it restarted?",
+      "type": "n8n-nodes-docker-api.docker",
+      "typeVersion": 1,
+      "position": [-220, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Restarting forever hides a real fault. After a few attempts, stop trying and\n// tell a human instead — a container that has died five times in a row is not\n// going to be fixed by a sixth restart.\nconst MAX_RESTARTS = 5;\n\nconst inspected = $input.first().json;\nconst event = $('A container died').first().json;\nconst logs = $('Capture logs BEFORE restarting').first().json;\n\nconst restartCount = inspected.state?.restartCount ?? 0;\nconst logLines = (logs.logs ?? [])\n  .map((l) => `[${l.stream}] ${l.message}`)\n  .join('\\n');\n\nreturn [{\n  json: {\n    container: event.name,\n    image: event.image ?? inspected.image ?? null,\n    exitCode: event.attributes?.exitCode ?? null,\n    diedAt: event.time ?? null,\n    restartCount,\n    giveUp: restartCount >= MAX_RESTARTS,\n    logTail: logLines || '(no output captured)',\n  },\n}];"
+      },
+      "id": "b1000000-0000-4000-8000-000000000004",
+      "name": "Worth another try?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "version": 2 },
+          "conditions": [
+            {
+              "id": "g1",
+              "leftValue": "={{ $json.giveUp }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "false", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b1000000-0000-4000-8000-000000000005",
+      "name": "Under the restart limit?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "resource": "container",
+        "operation": "start",
+        "containerId": "={{ $json.container }}"
+      },
+      "id": "b1000000-0000-4000-8000-000000000006",
+      "name": "Restart it",
+      "type": "n8n-nodes-docker-api.docker",
+      "typeVersion": 1,
+      "position": [440, -120]
+    },
+    {
+      "parameters": {
+        "resource": "container",
+        "operation": "waitForState",
+        "containerId": "={{ $('Worth another try?').item.json.container }}",
+        "targetState": "running",
+        "waitTimeout": 60
+      },
+      "id": "b1000000-0000-4000-8000-000000000007",
+      "name": "Confirm it stayed up",
+      "type": "n8n-nodes-docker-api.docker",
+      "typeVersion": 1,
+      "position": [660, -120],
+      "notes": "Starting is not the same as staying started. If the container has a health check, change the target to 'healthy' for a much stronger guarantee."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "version": 2 },
+          "conditions": [
+            {
+              "id": "r1",
+              "leftValue": "={{ $json.reached }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b1000000-0000-4000-8000-000000000008",
+      "name": "Did it recover?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [880, -120]
+    },
+    {
+      "parameters": {},
+      "id": "b1000000-0000-4000-8000-000000000009",
+      "name": "Recovered",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1100, -240],
+      "notes": "Worth a quiet notification rather than a loud one — but do send something. A container silently restarting nightly is a fault you want to know about eventually."
+    },
+    {
+      "parameters": {},
+      "id": "b1000000-0000-4000-8000-000000000010",
+      "name": "ALERT: restart did not hold",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1100, -20],
+      "notes": "Replace with Slack, Discord or email. The item already carries container, exitCode, restartCount and logTail — everything needed to triage without opening a terminal."
+    },
+    {
+      "parameters": {},
+      "id": "b1000000-0000-4000-8000-000000000011",
+      "name": "ALERT: giving up, needs a human",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [440, 140],
+      "notes": "The restart limit was reached. Escalate loudly and stop restarting: past this point a restart loop only buries the cause and burns CPU."
+    }
+  ],
+  "connections": {
+    "A container died": {
+      "main": [[{ "node": "Capture logs BEFORE restarting", "type": "main", "index": 0 }]]
+    },
+    "Capture logs BEFORE restarting": {
+      "main": [[{ "node": "How many times has it restarted?", "type": "main", "index": 0 }]]
+    },
+    "How many times has it restarted?": {
+      "main": [[{ "node": "Worth another try?", "type": "main", "index": 0 }]]
+    },
+    "Worth another try?": {
+      "main": [[{ "node": "Under the restart limit?", "type": "main", "index": 0 }]]
+    },
+    "Under the restart limit?": {
+      "main": [
+        [{ "node": "Restart it", "type": "main", "index": 0 }],
+        [{ "node": "ALERT: giving up, needs a human", "type": "main", "index": 0 }]
+      ]
+    },
+    "Restart it": {
+      "main": [[{ "node": "Confirm it stayed up", "type": "main", "index": 0 }]]
+    },
+    "Confirm it stayed up": {
+      "main": [[{ "node": "Did it recover?", "type": "main", "index": 0 }]]
+    },
+    "Did it recover?": {
+      "main": [
+        [{ "node": "Recovered", "type": "main", "index": 0 }],
+        [{ "node": "ALERT: restart did not hold", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}
