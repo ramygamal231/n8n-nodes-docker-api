@@ -1,4 +1,4 @@
-import Docker from 'dockerode';
+import { DockerApi as Docker, Container } from '../../../../utils/dockerApi';
 import { IDataObject, IExecuteFunctions } from 'n8n-workflow';
 
 import { translateDockerError } from '../../helpers/errorHandler';
@@ -20,7 +20,7 @@ const ACTIONS: Record<
     /** Destructive actions offer a dry run; start/pause/unpause do not. */
     supportsDryRun: boolean;
     run: (
-      container: Docker.Container,
+      container: Container,
       options: { timeout: number; signal: string },
     ) => Promise<unknown>;
   }

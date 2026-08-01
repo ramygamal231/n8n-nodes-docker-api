@@ -1,4 +1,5 @@
-import Docker from 'dockerode';
+import type Dockerode from 'dockerode';
+import { DockerApi as Docker } from '../../../../utils/dockerApi';
 import { Readable } from 'stream';
 import { IDataObject, IExecuteFunctions } from 'n8n-workflow';
 
@@ -112,13 +113,13 @@ interface RegistryAuth {
   serveraddress?: string;
 }
 
-function authFrom(extra: RegistryAuth): Docker.AuthConfig | undefined {
+function authFrom(extra: RegistryAuth): Dockerode.AuthConfig | undefined {
   if (!extra.username && !extra.password) return undefined;
   return {
     username: extra.username ?? '',
     password: extra.password ?? '',
     serveraddress: extra.serveraddress ?? 'https://index.docker.io/v1/',
-  } as Docker.AuthConfig;
+  } as Dockerode.AuthConfig;
 }
 
 export async function pullImage(

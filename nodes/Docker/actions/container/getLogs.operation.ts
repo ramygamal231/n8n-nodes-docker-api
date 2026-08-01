@@ -1,4 +1,4 @@
-import Docker from 'dockerode';
+import { DockerApi as Docker } from '../../../../utils/dockerApi';
 import { IExecuteFunctions } from 'n8n-workflow';
 
 import { translateDockerError } from '../../helpers/errorHandler';

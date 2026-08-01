@@ -1,4 +1,5 @@
-import Docker from 'dockerode';
+import type Dockerode from 'dockerode';
+import { DockerApi as Docker } from '../../../utils/dockerApi';
 
 /**
  * Resolves a container ID or name to a full container info object.
@@ -8,7 +9,7 @@ import Docker from 'dockerode';
 export async function resolveContainer(
   docker: Docker,
   containerIdOrName: string,
-): Promise<{ id: string; name: string; info: Docker.ContainerInfo }> {
+): Promise<{ id: string; name: string; info: Dockerode.ContainerInfo }> {
   const allContainers = await docker.listContainers({ all: true });
 
   // Try exact match first (ID or name with /)

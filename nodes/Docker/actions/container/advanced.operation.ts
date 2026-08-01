@@ -1,4 +1,5 @@
-import Docker from 'dockerode';
+import type Dockerode from 'dockerode';
+import { DockerApi as Docker, Container, Exec } from '../../../../utils/dockerApi';
 import { Readable } from 'stream';
 import { IDataObject, IExecuteFunctions } from 'n8n-workflow';
 
@@ -26,7 +27,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  */
 async function collectExecOutput(
   stream: Readable,
-  exec: Docker.Exec,
+  exec: Exec,
   timeoutMs: number,
 ): Promise<{ buffer: Buffer; timedOut: boolean; streamClosed: boolean }> {
   const chunks: Buffer[] = [];
@@ -212,7 +213,7 @@ export async function waitForState(
       );
     }
 
-    const reached = (info: Docker.ContainerInspectInfo): boolean => {
+    const reached = (info: Dockerode.ContainerInspectInfo): boolean => {
       if (targetState === 'running') return info.State?.Running === true;
       if (targetState === 'exited') return info.State?.Status === 'exited';
       return info.State?.Health?.Status === 'healthy';
@@ -278,7 +279,7 @@ export async function runContainer(
   };
 
   const startedAt = Date.now();
-  let container: Docker.Container | undefined;
+  let container: Container | undefined;
   let timedOut = false;
 
   try {
@@ -293,7 +294,7 @@ export async function runContainer(
       Tty: false,
       HostConfig: { NetworkMode: extra.networkMode || undefined },
       ...(extra.containerName ? { name: extra.containerName } : {}),
-    } as Docker.ContainerCreateOptions);
+    } as Dockerode.ContainerCreateOptions);
 
     await container.start();
 

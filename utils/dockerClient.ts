@@ -1,7 +1,9 @@
 import https from 'https';
 
-import Docker from 'dockerode';
 import { ICredentialDataDecryptedObject } from 'n8n-workflow';
+
+import { DockerApi } from './dockerApi';
+import { TransportOptions } from './dockerTransport';
 
 import {
   backoffMs,
@@ -74,7 +76,7 @@ type Dial = (options: DialOptions, callback: DialCallback) => void;
  * behind. One request is the largest unit that can be repeated while still
  * knowing exactly what is being repeated.
  */
-function withConnectionRetry(docker: Docker, retry: RetryOptions): Docker {
+function withConnectionRetry(docker: DockerApi, retry: RetryOptions): DockerApi {
   if (!retry.enabled || retry.maxAttempts <= 1) return docker;
 
   const modem = docker.modem as unknown as { dial: Dial };
@@ -117,19 +119,19 @@ function withConnectionRetry(docker: Docker, retry: RetryOptions): Docker {
 export function createDockerClient(
   credentials: ICredentialDataDecryptedObject,
   retry: RetryOptions = DEFAULT_RETRY,
-): Docker {
+): DockerApi {
   return withConnectionRetry(buildClient(credentials), retry);
 }
 
-function buildClient(credentials: ICredentialDataDecryptedObject): Docker {
+function buildClient(credentials: ICredentialDataDecryptedObject): DockerApi {
   const authMode = (credentials.authMode ?? 'socket') as DockerAuthMode;
 
   if (authMode === 'socket') {
-    return new Docker({ socketPath: requireString(credentials, 'socketPath', 'Socket Path') });
+    return new DockerApi({ socketPath: requireString(credentials, 'socketPath', 'Socket Path') });
   }
 
   if (authMode === 'tcp') {
-    return new Docker({
+    return new DockerApi({
       host: requireString(credentials, 'host', 'Host'),
       port: requireNumber(credentials, 'port', 'Port'),
       protocol: 'http',
@@ -138,7 +140,7 @@ function buildClient(credentials: ICredentialDataDecryptedObject): Docker {
 
   if (authMode === 'tls') {
     const ca = typeof credentials.ca === 'string' ? credentials.ca.trim() : '';
-    const options: Docker.DockerOptions = {
+    const options: TransportOptions = {
       host: requireString(credentials, 'host', 'Host'),
       port: requireNumber(credentials, 'tlsPort', 'TLS Port'),
       protocol: 'https',
@@ -167,15 +169,12 @@ function buildClient(credentials: ICredentialDataDecryptedObject): Docker {
         key: options.key,
       };
       if (ca !== '') agentOptions.ca = ca;
-      Object.assign(
-        options as Docker.DockerOptions & {
-          checkServerIdentity?: unknown;
-          agent?: https.Agent;
-        },
-        { checkServerIdentity: () => undefined, agent: new https.Agent(agentOptions) },
-      );
+      Object.assign(options, {
+        checkServerIdentity: () => undefined,
+        agent: new https.Agent(agentOptions),
+      });
     }
-    return new Docker(options);
+    return new DockerApi(options);
   }
 
   if (authMode === 'portainer') {
@@ -194,16 +193,17 @@ function buildClient(credentials: ICredentialDataDecryptedObject): Docker {
     const protocol = parsed.protocol.replace(':', '') as 'http' | 'https';
     const port = parsed.port !== '' ? Number(parsed.port) : protocol === 'https' ? 443 : 80;
 
-    // Portainer mounts the Docker API under this prefix; `version` is prepended
-    // to every request path by docker-modem.
+    // Portainer mounts the Docker API beneath this prefix. dockerode expressed
+    // that by abusing its `version` option, which is why the transport now names
+    // the concept for what it is.
     const basePath = parsed.pathname.replace(/\/+$/, '');
     const prefix = `${basePath}/api/endpoints/${endpointId}/docker`.replace(/^\//, '');
 
-    return new Docker({
+    return new DockerApi({
       protocol,
       host: parsed.hostname,
       port,
-      version: prefix,
+      pathPrefix: prefix,
       headers: { 'X-API-Key': token },
     });
   }

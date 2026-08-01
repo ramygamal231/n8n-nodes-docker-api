@@ -1,4 +1,5 @@
-import Docker from 'dockerode';
+import type Dockerode from 'dockerode';
+import { DockerApi as Docker } from '../../../../utils/dockerApi';
 import { IDataObject, IExecuteFunctions } from 'n8n-workflow';
 
 import { translateDockerError } from '../../helpers/errorHandler';
@@ -160,7 +161,7 @@ export async function createContainer(
     const toNs = (seconds: number | undefined): number | undefined =>
       typeof seconds === 'number' && seconds > 0 ? Math.round(seconds * 1e9) : undefined;
 
-    const createOptions: Docker.ContainerCreateOptions = {
+    const createOptions: Dockerode.ContainerCreateOptions = {
       Image: image,
       Env: env.length ? env : undefined,
       Cmd: commandRaw ? parseCommand(commandRaw) : undefined,
@@ -209,7 +210,7 @@ export async function createContainer(
             : undefined,
       },
     };
-    if (name) (createOptions as Docker.ContainerCreateOptions & { name?: string }).name = name;
+    if (name) (createOptions as Dockerode.ContainerCreateOptions & { name?: string }).name = name;
 
     const created = await docker.createContainer(createOptions);
 

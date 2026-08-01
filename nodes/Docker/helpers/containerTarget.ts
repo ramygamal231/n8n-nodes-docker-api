@@ -1,10 +1,10 @@
-import Docker from 'dockerode';
+import { DockerApi as Docker, Container } from '../../../utils/dockerApi';
 import { IDataObject } from 'n8n-workflow';
 
 import { resolveContainer } from './resolveContainer';
 
 export interface ContainerTarget {
-  container: Docker.Container;
+  container: Container;
   id: string;
   shortId: string;
   name: string;

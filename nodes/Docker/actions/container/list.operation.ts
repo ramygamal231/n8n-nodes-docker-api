@@ -1,4 +1,5 @@
-import Docker from 'dockerode';
+import type Dockerode from 'dockerode';
+import { DockerApi as Docker } from '../../../../utils/dockerApi';
 import { IExecuteFunctions } from 'n8n-workflow';
 
 import { translateDockerError } from '../../helpers/errorHandler';
@@ -24,7 +25,7 @@ export async function listContainers(
     };
     const includeLabels = this.getNodeParameter('includeLabels', itemIndex, true) as boolean;
 
-    const listOptions: Docker.ContainerListOptions = {
+    const listOptions: Dockerode.ContainerListOptions = {
       all: showAll,
       filters: {},
     };

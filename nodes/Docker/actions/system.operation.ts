@@ -1,4 +1,4 @@
-import Docker from 'dockerode';
+import { DockerApi as Docker } from '../../../utils/dockerApi';
 import { Readable } from 'stream';
 import { IDataObject, IExecuteFunctions } from 'n8n-workflow';
 

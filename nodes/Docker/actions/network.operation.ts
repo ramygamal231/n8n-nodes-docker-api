@@ -1,4 +1,5 @@
-import Docker from 'dockerode';
+import type Dockerode from 'dockerode';
+import { DockerApi as Docker } from '../../../utils/dockerApi';
 import { IDataObject, IExecuteFunctions } from 'n8n-workflow';
 
 import { translateDockerError } from '../helpers/errorHandler';
@@ -84,7 +85,7 @@ export async function createNetwork(
     };
 
     const labels = pairsToObject(labelPairs);
-    const options: Docker.NetworkCreateOptions = {
+    const options: Dockerode.NetworkCreateOptions = {
       Name: name,
       Driver: extra.driver || 'bridge',
       Internal: extra.internal === true,
@@ -96,7 +97,7 @@ export async function createNetwork(
     // IPAM is only sent when the user actually specified addressing, otherwise
     // Docker's automatic subnet allocation is overridden with an empty config.
     if (extra.subnet || extra.gateway) {
-      (options as Docker.NetworkCreateOptions & { IPAM?: unknown }).IPAM = {
+      (options as Dockerode.NetworkCreateOptions & { IPAM?: unknown }).IPAM = {
         Driver: 'default',
         Config: [
           {

@@ -1,4 +1,5 @@
-import Docker from 'dockerode';
+import type Dockerode from 'dockerode';
+import { DockerApi as Docker } from '../../../../utils/dockerApi';
 import { IDataObject, IExecuteFunctions } from 'n8n-workflow';
 
 import { translateDockerError } from '../../helpers/errorHandler';
@@ -25,7 +26,7 @@ export async function listImages(
       dangling?: boolean;
     };
 
-    const listOptions: Docker.ListImagesOptions = { all: showAll };
+    const listOptions: Dockerode.ListImagesOptions = { all: showAll };
     const dockerFilters: Record<string, string[]> = {};
     if (filters.dangling === true) dockerFilters.dangling = ['true'];
     if (Object.keys(dockerFilters).length) {

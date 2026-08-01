@@ -19,9 +19,9 @@ const tlsCreds = (over: Record<string, unknown> = {}): ICredentialDataDecryptedO
   ...over,
 }) as ICredentialDataDecryptedObject);
 
-/** dockerode keeps what it was constructed with on `modem`. */
+/** The client exposes the transport configuration it was built with. */
 const modemOf = (creds: ICredentialDataDecryptedObject) =>
-  (createDockerClient(creds) as unknown as { modem: Record<string, unknown> }).modem;
+  createDockerClient(creds).options as unknown as Record<string, unknown>;
 
 describe('createDockerClient — TLS', () => {
   it('passes the certificate material through to the transport', () => {
