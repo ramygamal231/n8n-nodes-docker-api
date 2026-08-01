@@ -6,8 +6,7 @@
         "rule": {
           "interval": [
             {
-              "field": "hours",
-              "hoursInterval": 1
+              "field": "hours"
             }
           ]
         }
@@ -17,7 +16,7 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        -660,
+        -656,
         0
       ]
     },
@@ -28,19 +27,19 @@
             {
               "id": "c1",
               "name": "containerName",
-              "value": "my-app",
+              "value": "n8ntest-tplcheck",
               "type": "string"
             },
             {
               "id": "c2",
               "name": "image",
-              "value": "nginx:alpine",
+              "value": "alpine:latest",
               "type": "string"
             },
             {
               "id": "c3",
               "name": "hostPort",
-              "value": 8080,
+              "value": 18110,
               "type": "number"
             },
             {
@@ -58,7 +57,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -440,
+        -448,
         0
       ],
       "notes": "Everything you need to change lives here."
@@ -68,14 +67,15 @@
         "resource": "image",
         "operation": "distributionInspect",
         "imageReference": "={{ $json.image }}",
-        "additionalFields": {}
+        "additionalFields": {},
+        "retryPolicy": {}
       },
       "id": "a1000000-0000-4000-8000-000000000003",
       "name": "Check registry for a new digest",
       "type": "n8n-nodes-docker-api.docker",
       "typeVersion": 1,
       "position": [
-        -220,
+        -224,
         0
       ],
       "notes": "Reads the manifest only — a few KB, not the whole image. This is what makes running hourly reasonable."
@@ -84,7 +84,8 @@
       "parameters": {
         "resource": "image",
         "operation": "inspectImage",
-        "imageReference": "={{ $json.image }}"
+        "imageReference": "={{ $json.image }}",
+        "retryPolicy": {}
       },
       "id": "a1000000-0000-4000-8000-000000000004",
       "name": "Inspect the local image",
@@ -106,7 +107,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        220,
+        224,
         0
       ]
     },
@@ -115,6 +116,8 @@
         "conditions": {
           "options": {
             "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
             "version": 2
           },
           "conditions": [
@@ -138,7 +141,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        440,
+        448,
         0
       ]
     },
@@ -147,24 +150,26 @@
         "resource": "image",
         "operation": "pullImage",
         "imageReference": "={{ $json.image }}",
-        "additionalFields": {}
+        "additionalFields": {},
+        "retryPolicy": {}
       },
       "id": "a1000000-0000-4000-8000-000000000007",
       "name": "Pull the new image",
       "type": "n8n-nodes-docker-api.docker",
       "typeVersion": 1,
       "position": [
-        660,
-        -100
+        672,
+        -96
       ],
       "notes": "Waits for the pull to finish and returns a summary, rather than a progress stream that never ends."
     },
     {
       "parameters": {
-        "resource": "container",
         "operation": "remove",
         "containerId": "={{ $('Has the image changed?').item.json.containerName }}",
         "force": true,
+        "retryPolicy": {},
+        "resource": "container",
         "removeVolumes": false,
         "dryRun": false
       },
@@ -174,30 +179,24 @@
       "typeVersion": 1,
       "position": [
         880,
-        -100
+        -96
       ],
       "onError": "continueRegularOutput",
       "notes": "Continues on error: on the very first run there is nothing to remove."
     },
     {
       "parameters": {
-        "resource": "container",
         "operation": "create",
         "image": "={{ $('Has the image changed?').item.json.image }}",
         "containerName": "={{ $('Has the image changed?').item.json.containerName }}",
-        "command": "",
         "portMappings": {
           "mapping": [
             {
               "containerPort": "={{ $('Has the image changed?').item.json.containerPort }}",
-              "hostPort": "={{ $('Has the image changed?').item.json.hostPort }}",
-              "protocol": "tcp"
+              "hostPort": "={{ $('Has the image changed?').item.json.hostPort }}"
             }
           ]
         },
-        "volumeMappings": {},
-        "env": {},
-        "labels": {},
         "additionalFields": {
           "startAfterCreate": true,
           "restartPolicy": "unless-stopped",
@@ -206,37 +205,43 @@
               "test": "wget -q --spider http://localhost:{{ $('Has the image changed?').item.json.containerPort }}/ || exit 1",
               "intervalSeconds": 5,
               "timeoutSeconds": 3,
-              "retries": 3,
               "startPeriodSeconds": 5
             }
           }
-        }
+        },
+        "retryPolicy": {},
+        "resource": "container",
+        "command": "",
+        "volumeMappings": {},
+        "env": {},
+        "labels": {}
       },
       "id": "a1000000-0000-4000-8000-000000000009",
       "name": "Create the new container",
       "type": "n8n-nodes-docker-api.docker",
       "typeVersion": 1,
       "position": [
-        1100,
-        -100
+        1104,
+        -96
       ],
       "notes": "A health check is defined here so the next step has something real to wait for. Adjust the test command to suit your service."
     },
     {
       "parameters": {
-        "resource": "container",
         "operation": "waitForState",
         "containerId": "={{ $('Has the image changed?').item.json.containerName }}",
         "targetState": "healthy",
-        "waitTimeout": 120
+        "waitTimeout": 120,
+        "retryPolicy": {},
+        "resource": "container"
       },
       "id": "a1000000-0000-4000-8000-000000000010",
       "name": "Wait until it is healthy",
       "type": "n8n-nodes-docker-api.docker",
       "typeVersion": 1,
       "position": [
-        1320,
-        -100
+        1328,
+        -96
       ],
       "notes": "The point of the whole workflow. 'Running' only means the process started; 'healthy' means it actually works."
     },
@@ -245,6 +250,8 @@
         "conditions": {
           "options": {
             "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
             "version": 2
           },
           "conditions": [
@@ -268,8 +275,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1540,
-        -100
+        1552,
+        -96
       ]
     },
     {
@@ -280,7 +287,7 @@
       "typeVersion": 1,
       "position": [
         1760,
-        -220
+        -224
       ],
       "notes": "Replace with Slack, Discord, email — whatever you use."
     },
@@ -303,16 +310,16 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        660,
-        140
+        672,
+        144
       ],
       "notes": "Nothing to do. This is the branch taken almost every run, and it costs one small registry call."
     },
     {
       "parameters": {
         "content": "## ⚙️ Start here\n\nOpen **Settings** and set the container name, image and ports.\n\nThat is the only node you need to touch to make this work for your setup.",
-        "height": 220,
-        "width": 460,
+        "height": 364,
+        "width": 428,
         "color": 4
       },
       "id": "a9000000-0000-4000-8000-000000000001",
@@ -320,15 +327,15 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -700,
-        -260
+        -704,
+        -192
       ]
     },
     {
       "parameters": {
         "content": "## 🔍 Why this can run hourly\n\n**Check registry** reads the image manifest only — a few kilobytes — instead of pulling the whole image to find out nothing changed.\n\nIt compares **digests, never tags**. A tag moves; a digest does not.",
-        "height": 220,
-        "width": 660,
+        "height": 364,
+        "width": 708,
         "color": 5
       },
       "id": "a9000000-0000-4000-8000-000000000002",
@@ -336,15 +343,15 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -220,
-        -260
+        -272,
+        -192
       ]
     },
     {
       "parameters": {
         "content": "## 🚀 Replace, then prove it works\n\n**Wait until it is healthy** is the point of the whole workflow. *Running* only means the process started — *healthy* means it actually serves traffic.",
-        "height": 170,
-        "width": 900,
+        "height": 282,
+        "width": 1060,
         "color": 6
       },
       "id": "a9000000-0000-4000-8000-000000000003",
@@ -353,13 +360,13 @@
       "typeVersion": 1,
       "position": [
         640,
-        -300
+        -224
       ]
     },
     {
       "parameters": {
         "content": "## 🔔 Connect your notifications\n\nReplace both placeholders with Slack, Discord, email — whatever you use.\n\n**The unhealthy branch is the important one.** An update that deploys but never comes up is the failure worth waking up for, and where you would roll back to the previous tag.",
-        "height": 460,
+        "height": 620,
         "width": 320,
         "color": 3
       },
@@ -368,8 +375,8 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1720,
-        -320
+        1728,
+        -480
       ]
     }
   ],

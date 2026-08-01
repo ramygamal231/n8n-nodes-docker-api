@@ -3,15 +3,15 @@
   "nodes": [
     {
       "parameters": {
-        "eventTypes": [
-          "container"
-        ],
         "actions": [
           "die"
         ],
         "filters": {
           "label": "selfheal=true"
         },
+        "eventTypes": [
+          "container"
+        ],
         "catchUp": true
       },
       "id": "b1000000-0000-4000-8000-000000000001",
@@ -19,19 +19,20 @@
       "type": "n8n-nodes-docker-api.dockerTrigger",
       "typeVersion": 1,
       "position": [
-        -660,
+        -656,
         0
       ],
       "notes": "Opt in per container with the label selfheal=true, so this never touches something you did not mean it to. Catch-up is on: a container that dies while n8n itself is restarting is still handled, which is exactly when it tends to happen."
     },
     {
       "parameters": {
-        "resource": "container",
         "operation": "getLogs",
         "containerId": "={{ $json.name }}",
         "tail": 50,
-        "stream": "both",
         "timestamps": true,
+        "retryPolicy": {},
+        "resource": "container",
+        "stream": "both",
         "sinceMinutes": 0
       },
       "id": "b1000000-0000-4000-8000-000000000002",
@@ -39,7 +40,7 @@
       "type": "n8n-nodes-docker-api.docker",
       "typeVersion": 1,
       "position": [
-        -440,
+        -448,
         0
       ],
       "onError": "continueRegularOutput",
@@ -47,16 +48,17 @@
     },
     {
       "parameters": {
-        "resource": "container",
         "operation": "inspect",
-        "containerId": "={{ $('A container died').item.json.name }}"
+        "containerId": "={{ $('A container died').item.json.name }}",
+        "retryPolicy": {},
+        "resource": "container"
       },
       "id": "b1000000-0000-4000-8000-000000000003",
       "name": "How many times has it restarted?",
       "type": "n8n-nodes-docker-api.docker",
       "typeVersion": 1,
       "position": [
-        -220,
+        -224,
         0
       ]
     },
@@ -78,6 +80,8 @@
         "conditions": {
           "options": {
             "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
             "version": 2
           },
           "conditions": [
@@ -101,30 +105,32 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        220,
+        224,
         0
       ]
     },
     {
       "parameters": {
-        "resource": "container",
         "operation": "start",
-        "containerId": "={{ $json.container }}"
+        "containerId": "={{ $json.container }}",
+        "retryPolicy": {},
+        "resource": "container"
       },
       "id": "b1000000-0000-4000-8000-000000000006",
       "name": "Restart it",
       "type": "n8n-nodes-docker-api.docker",
       "typeVersion": 1,
       "position": [
-        440,
-        -120
+        448,
+        -128
       ]
     },
     {
       "parameters": {
-        "resource": "container",
         "operation": "waitForState",
         "containerId": "={{ $('Worth another try?').item.json.container }}",
+        "retryPolicy": {},
+        "resource": "container",
         "targetState": "running",
         "waitTimeout": 60
       },
@@ -133,8 +139,8 @@
       "type": "n8n-nodes-docker-api.docker",
       "typeVersion": 1,
       "position": [
-        660,
-        -120
+        672,
+        -128
       ],
       "notes": "Starting is not the same as staying started. If the container has a health check, change the target to 'healthy' for a much stronger guarantee."
     },
@@ -143,6 +149,8 @@
         "conditions": {
           "options": {
             "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
             "version": 2
           },
           "conditions": [
@@ -167,7 +175,7 @@
       "typeVersion": 2.2,
       "position": [
         880,
-        -120
+        -128
       ]
     },
     {
@@ -177,7 +185,7 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        1100,
+        1104,
         -240
       ],
       "notes": "Worth a quiet notification rather than a loud one — but do send something. A container silently restarting nightly is a fault you want to know about eventually."
@@ -189,8 +197,8 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        1100,
-        -20
+        1104,
+        -16
       ],
       "notes": "Replace with Slack, Discord or email. The item already carries container, exitCode, restartCount and logTail — everything needed to triage without opening a terminal."
     },
@@ -201,16 +209,16 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        440,
-        140
+        448,
+        144
       ],
       "notes": "The restart limit was reached. Escalate loudly and stop restarting: past this point a restart loop only buries the cause and burns CPU."
     },
     {
       "parameters": {
         "content": "## 🏷️ Containers opt in\n\nAdd the label `selfheal=true` to any container you want restarted automatically:\n\n```\ndocker run -l selfheal=true ...\n```\n\nNothing else is touched, so this can never restart something you stopped on purpose.",
-        "height": 230,
-        "width": 460,
+        "height": 598,
+        "width": 204,
         "color": 4
       },
       "id": "b9000000-0000-4000-8000-000000000001",
@@ -218,15 +226,15 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -700,
-        -280
+        -704,
+        -432
       ]
     },
     {
       "parameters": {
         "content": "## 🔍 Logs are taken first\n\nDeliberately **before** the restart. Restarting can rotate or discard the very output that explains the crash.\n\nThe alert carries the last 50 lines, each labelled with the stream it came from.",
-        "height": 230,
-        "width": 440,
+        "height": 438,
+        "width": 840,
         "color": 5
       },
       "id": "b9000000-0000-4000-8000-000000000002",
@@ -234,15 +242,15 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -220,
-        -280
+        -480,
+        -272
       ]
     },
     {
       "parameters": {
         "content": "## ✅ Starting is not recovering\n\nIf your container defines a health check, change **Confirm it stayed up** to wait for `healthy` instead of `running` — a much stronger guarantee.",
-        "height": 150,
-        "width": 700,
+        "height": 294,
+        "width": 588,
         "color": 6
       },
       "id": "b9000000-0000-4000-8000-000000000003",
@@ -250,14 +258,14 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        420,
-        -300
+        432,
+        -272
       ]
     },
     {
       "parameters": {
-        "content": "## 🛑 It gives up after 5 tries\n\nA container that has died five times will not be fixed by a sixth restart, and a restart loop buries the cause while burning CPU.\n\nChange the limit in **Worth another try?**",
-        "height": 200,
+        "content": "\n\n\n\n\n\n\n\n\n## 🛑 It gives up after 5 tries\n\nA container that has died five times will not be fixed by a sixth restart, and a restart loop buries the cause while burning CPU.\n\nChange the limit in **Worth another try?**",
+        "height": 424,
         "width": 420,
         "color": 3
       },
@@ -266,8 +274,8 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        380,
-        100
+        384,
+        112
       ]
     }
   ],
