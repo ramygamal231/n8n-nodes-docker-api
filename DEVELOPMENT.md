@@ -136,6 +136,25 @@ only in the retry layer: the retry wrapper sits on `modem.dial`, and exec and
 attach use a HIJACKED stream that fails long after dial returned. The retry layer
 never sees it.
 
+### Testing the daemon dying mid-batch
+
+Per-item granularity and recovery are proven separately elsewhere. The
+combination is the scenario people actually hit: a batch is part-way through
+when the daemon disappears.
+
+```bash
+node C:\n8n-test\midflow-test.js
+```
+
+150 items, the TLS endpoint stopped mid-run and restarted four seconds later.
+All 150 must come back with real data. The batch size matters: at eight items it
+finished in under a second and the endpoint was killed after the run had already
+succeeded, so the test passed while proving nothing.
+
+It uses a READ deliberately. A write broken in flight is not retried by design,
+so a batch of writes hitting an outage is *supposed* to fail rather than risk
+repeating one.
+
 ### Testing socket permissions
 
 The scenario the retry feature exists for: the socket permissions change under
