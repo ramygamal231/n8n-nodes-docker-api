@@ -168,6 +168,23 @@ function translateMessage(error: unknown): string {
   if (msg.includes('timeout') || msg.includes('ETIMEDOUT')) {
     return 'Connection timed out. Check network connectivity to the Docker host.';
   }
+  // Node's wording for a response cut off partway through. On its own it is the
+  // single word "aborted", which tells the user nothing about what happened or
+  // what to do next.
+  //
+  // The uncertainty is stated here rather than only by the retry layer, because
+  // that layer wraps modem.dial and cannot see a break in a HIJACKED stream —
+  // exec and attach fail this way long after dial returned. The honest thing to
+  // say is identical in both cases: the request was delivered, the answer was
+  // not, and nobody knows which side of that the daemon acted on.
+  if (lower === 'aborted' || lower.includes('request aborted') || lower.includes('socket hang up')) {
+    return (
+      'The connection to Docker was interrupted before the response arrived, so it is not ' +
+      'known whether the daemon completed the operation. The daemon may have restarted, or a ' +
+      'proxy in front of it closed the connection. Check the current state before running this ' +
+      'again.'
+    );
+  }
 
   // Fallback: return original message without prefix for cleaner output
   return msg;

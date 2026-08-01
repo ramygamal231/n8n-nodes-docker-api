@@ -210,3 +210,17 @@ describe('translateDockerError — connection retry annotations', () => {
     );
   });
 });
+
+describe('translateDockerError — an interrupted response', () => {
+  it('says the outcome is unknown rather than implying nothing happened', () => {
+    // Node's raw wording for this is the single word "aborted". The uncertainty
+    // has to be stated in the MESSAGE, not only by the retry layer: that layer
+    // wraps modem.dial and cannot see a break in a hijacked stream, which is how
+    // exec and attach fail — long after dial returned.
+    for (const raw of ['aborted', 'socket hang up', 'request aborted']) {
+      const msg = translateDockerError(new Error(raw));
+      expect(msg).toContain('not known whether the daemon completed');
+      expect(msg).toContain('Check the current state');
+    }
+  });
+});

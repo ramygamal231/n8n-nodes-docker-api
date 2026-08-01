@@ -90,9 +90,14 @@ export function classifyFailure(error: unknown): RetryPhase {
   if (code && CONNECT_PHASE_CODES.has(code)) return 'connect';
   if (code && IN_FLIGHT_CODES.has(code)) return 'in-flight';
 
-  // Node reports a mid-request disconnect with this message and no useful code.
+  // Node reports a mid-request disconnect with these messages and no useful code.
+  // "aborted" in particular is what surfaces when the response is cut off partway
+  // — measured against a real endpoint killed mid-request. Left unclassified it
+  // fell through to permanent, which reached the user as the bare word "aborted"
+  // and said nothing about whether the daemon had acted.
   const message = String((error as Error)?.message ?? '').toLowerCase();
   if (message.includes('socket hang up')) return 'in-flight';
+  if (message.includes('aborted')) return 'in-flight';
   if (message.includes('timeout') || message.includes('timed out')) return 'in-flight';
 
   return 'permanent';

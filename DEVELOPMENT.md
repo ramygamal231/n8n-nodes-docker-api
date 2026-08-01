@@ -63,7 +63,7 @@ node C:\n8n-test\run-test.js '{"name":"list","params":{"resource":"container","o
 
 # every suite
 for f in suite phase1 phase2 phase3 phase4 phase5 phase7 \
-         comp-newops comp-core comp-dist depth1 depth2; do
+         comp-newops comp-core comp-dist depth1 depth2 tls-suite retry-suite; do
   node C:\n8n-test\run-test.js --file C:\n8n-test\$f.json
 done
 ```
@@ -109,6 +109,32 @@ that takes no input.
 The local daemon always answers, so without it the connection-failure path of
 every operation is unreachable from a test — while being the single most common
 real-world failure. `depth2` runs it against every resource.
+
+### Testing that retry actually recovers
+
+Every retry spec in `retry-suite.json` points at an endpoint that stays dead, so
+they prove the giving-up path. Self-healing is the actual claim, and it needs an
+endpoint that comes back.
+
+```bash
+node C:\n8n-test\recovery-test.js
+```
+
+The TLS proxy is that endpoint: a real Docker API whose availability can be
+controlled without touching the host daemon. The harness stops it, starts a
+request, restarts it mid-retry, and requires the request to SUCCEED — with a
+control run that repeats the identical interruption with retry disabled and
+requires it to fail, so the recovery is attributable to the feature rather than
+to timing.
+
+It also breaks a WRITE mid-flight, by killing the endpoint while an exec is
+holding the connection open, and asserts the error says the outcome is unknown
+rather than implying nothing happened.
+
+That last case is why the uncertainty is worded in `translateDockerError` and not
+only in the retry layer: the retry wrapper sits on `modem.dial`, and exec and
+attach use a HIJACKED stream that fails long after dial returned. The retry layer
+never sees it.
 
 ### Testing the TLS transport
 

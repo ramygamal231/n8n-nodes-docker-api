@@ -125,3 +125,21 @@ describe('resolveRetryOptions', () => {
     expect(resolveRetryOptions({ initialDelayMs: 1e9 }).initialDelayMs).toBe(30_000);
   });
 });
+
+describe('classifyFailure — a response cut off partway', () => {
+  it('treats Node\'s bare "aborted" as in-flight, not permanent', () => {
+    // Measured against a real endpoint killed mid-request: this is what surfaces.
+    // Classified as permanent it reached the user as the single word "aborted",
+    // with nothing said about whether the daemon had already acted.
+    expect(classifyFailure(new Error('aborted'))).toBe('in-flight');
+  });
+
+  it('so a write broken this way is not repeated, and says why', () => {
+    expect(shouldRetry(new Error('aborted'), 'POST')).toBe(false);
+    expect(describeUnretried(new Error('aborted'), 'POST')).toContain('not known');
+  });
+
+  it('but a read broken this way is retried', () => {
+    expect(shouldRetry(new Error('aborted'), 'GET')).toBe(true);
+  });
+});
