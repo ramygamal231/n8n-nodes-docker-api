@@ -88,5 +88,17 @@ jobs:
       # Passing an empty token would be worse than passing none: setup-node
       # writes it into .npmrc, and the registry rejects the blank value with a
       # 401 before trusted publishing is ever attempted.
+      # A prerelease must NOT become the default install. npm tags whatever it
+      # publishes as `latest` unless told otherwise — it does not infer anything
+      # from the version string — so publishing 1.0.0-rc.1 plainly would hand a
+      # release candidate to everyone running `npm i n8n-nodes-docker-api`.
       - name: Publish with provenance
-        run: npm publish --provenance --access public
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          if [[ "$VERSION" == *-* ]]; then
+            echo "Prerelease $VERSION — publishing under the 'next' tag"
+            npm publish --provenance --access public --tag next
+          else
+            echo "Release $VERSION — publishing as 'latest'"
+            npm publish --provenance --access public
+          fi

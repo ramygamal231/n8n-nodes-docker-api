@@ -86,7 +86,7 @@ Requires a self-hosted n8n with access to a Docker daemon.
 The socket path defaults correctly for the host n8n is running on —
 `/var/run/docker.sock` on Linux and macOS, `//./pipe/docker_engine` on Windows.
 
-![Credentials](./assets/credentials-ui.png)
+![Credentials](./assets/credentials-ui.jpg)
 
 ### Access modes
 
