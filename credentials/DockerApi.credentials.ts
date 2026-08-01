@@ -16,7 +16,7 @@ export class DockerApi implements ICredentialType {
   name = 'dockerApi';
   displayName = 'Docker API';
   documentationUrl = 'https://github.com/ramygamal231/n8n-nodes-docker-api';
-  icon: Icon = 'file:docker.svg';
+  icon: Icon = { light: 'file:docker.svg', dark: 'file:docker.svg' };
 
   properties: INodeProperties[] = [
     {

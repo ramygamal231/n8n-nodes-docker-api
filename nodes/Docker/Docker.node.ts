@@ -35,7 +35,7 @@ export class Docker implements INodeType {
   description: INodeTypeDescription = {
     displayName: 'Docker API',
     name: 'docker',
-    icon: 'file:docker.svg',
+    icon: { light: 'file:docker.svg', dark: 'file:docker.svg' },
     group: ['transform'],
     version: 1,
     subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',

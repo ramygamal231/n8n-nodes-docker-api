@@ -26,7 +26,7 @@ export class DockerTrigger implements INodeType {
   description: INodeTypeDescription = {
     displayName: 'Docker Trigger',
     name: 'dockerTrigger',
-    icon: 'file:docker.svg',
+    icon: { light: 'file:docker.svg', dark: 'file:docker.svg' },
     group: ['trigger'],
     version: 1,
     subtitle: '={{$parameter["eventTypes"].join(", ")}}',

@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-docker-api",
-  "version": "1.0.0-rc.1",
+  "version": "1.0.0",
   "description": "Interact with Docker via direct API (no Portainer required) — manage containers, stream logs, and automate infrastructure workflows",
   "keywords": [
     "n8n",
@@ -18,7 +18,10 @@
     "type": "git",
     "url": "git+https://github.com/ramygamal231/n8n-nodes-docker-api.git"
   },
-  "author": "Ramy Gamal",
+  "author": {
+    "name": "Ramy Gamal",
+    "email": "ramigamal211@gmail.com"
+  },
   "main": "index.js",
   "files": [
     "dist"
