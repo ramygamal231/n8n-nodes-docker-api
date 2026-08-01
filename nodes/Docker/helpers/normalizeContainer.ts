@@ -23,6 +23,14 @@ export interface NormalizedContainer {
   name: string;
   image: string;
   status: ContainerStatus;
+  /**
+   * Health check status, or null when the container defines no health check.
+   *
+   * null and "unhealthy" mean very different things and must not collapse into
+   * each other: one is "nobody is checking", the other is "checked and failing".
+   * The key is always present so a downstream IF node can rely on it.
+   */
+  health: string | null;
   createdAt: string;
   ports: NormalizedPort[];
   labels: Record<string, string>;
@@ -52,6 +60,8 @@ interface CommonContainerFields {
   createdAt: string;
   ports: NormalizedPort[];
   labels: Record<string, string>;
+  /** null when the container defines no health check — not the same as unhealthy. */
+  health: string | null;
 }
 
 const stripLeadingSlash = (value: string): string => value.replace(/^\//, '');
@@ -135,6 +145,7 @@ function toCommonFields(raw: ContainerInfo | ContainerInspectInfo): CommonContai
       createdAt: toIsoTimestamp(raw.Created),
       ports: portsFromInspect(raw),
       labels: raw.Config?.Labels ?? {},
+      health: (raw.State as { Health?: { Status?: string } } | undefined)?.Health?.Status ?? null,
     };
   }
   const list = raw as ContainerInfo;
@@ -146,6 +157,9 @@ function toCommonFields(raw: ContainerInfo | ContainerInspectInfo): CommonContai
     createdAt: toIsoTimestamp(list.Created),
     ports: portsFromList(list),
     labels: list.Labels ?? {},
+    // The list endpoint has no health field. It hides the status inside the
+    // human-readable Status string, as "Up 2 minutes (healthy)".
+    health: /\((healthy|unhealthy|starting)\)/.exec(list.Status ?? '')?.[1] ?? null,
   };
 }
 
@@ -187,6 +201,7 @@ export function normalizeContainerInfo(
     name: common.name === '' ? 'unknown' : common.name,
     image: common.image,
     status: mapStatus(common.state),
+    health: common.health,
     createdAt: common.createdAt,
     ports: common.ports,
     labels: includeLabels ? common.labels : {},

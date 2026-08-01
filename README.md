@@ -31,6 +31,7 @@ returned it.
   "name": "api-gateway",
   "image": "nginx:alpine",
   "status": "running",
+  "health": "healthy",
   "createdAt": "2026-07-31T13:45:48.000Z",
   "ports": [{ "containerPort": 80, "hostPort": 8080, "protocol": "tcp" }],
   "labels": { "com.example.tier": "edge" }
@@ -117,6 +118,11 @@ that fails midway never leaves one behind.
 
 **Execute Command** returns `{ stdout, stderr, exitCode }` from a single
 operation, with the two streams kept separate.
+
+**Create Container** covers what a real deployment needs, not just the basics:
+health check, CPU and memory limits, capabilities, devices, extra hosts, DNS,
+shared memory size, tmpfs mounts, an init process, restart policy and network
+mode — alongside ports, volumes, environment and labels.
 
 **Wait For State** blocks until a container is `running`, `healthy` or `exited`.
 Waiting on *healthy* is the piece every deploy-then-verify workflow needs, and

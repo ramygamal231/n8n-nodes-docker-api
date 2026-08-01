@@ -89,6 +89,26 @@ export async function createContainer(
       networkMode?: string;
       memoryMB?: number;
       startAfterCreate?: boolean;
+      cpus?: number;
+      cpuShares?: number;
+      healthcheck?: {
+        check?: {
+          test?: string;
+          intervalSeconds?: number;
+          timeoutSeconds?: number;
+          retries?: number;
+          startPeriodSeconds?: number;
+        };
+      };
+      extraHosts?: string;
+      dns?: string;
+      capAdd?: string;
+      capDrop?: string;
+      privileged?: boolean;
+      devices?: string;
+      shmSizeMB?: number;
+      tmpfs?: string;
+      init?: boolean;
     };
 
     const exposedPorts: Record<string, Record<string, never>> = {};
@@ -106,6 +126,40 @@ export async function createContainer(
 
     const env = Object.entries(pairsToObject(envPairs)).map(([k, v]) => `${k}=${v}`);
 
+    /** Comma-separated free text into a clean list, ignoring stray whitespace. */
+    const csv = (raw: string | undefined): string[] =>
+      (raw ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => s !== '');
+
+    // Docker expects devices as objects, and defaults the in-container path to
+    // the host path when only one is given — which is what people mean by
+    // --device /dev/ttyUSB0.
+    const devices = csv(extra.devices).map((d) => {
+      const [host, container] = d.split(':');
+      return {
+        PathOnHost: host,
+        PathInContainer: container || host,
+        CgroupPermissions: 'rwm',
+      };
+    });
+
+    // Tmpfs is a map of path to mount options, where an empty string means
+    // "defaults" rather than "no options".
+    const tmpfs: Record<string, string> = {};
+    for (const entry of csv(extra.tmpfs)) {
+      const idx = entry.indexOf(':');
+      if (idx === -1) tmpfs[entry] = '';
+      else tmpfs[entry.slice(0, idx)] = entry.slice(idx + 1);
+    }
+
+    const hc = extra.healthcheck?.check;
+    const healthTest = hc?.test?.trim();
+    // Docker takes nanoseconds. Seconds are what people think in.
+    const toNs = (seconds: number | undefined): number | undefined =>
+      typeof seconds === 'number' && seconds > 0 ? Math.round(seconds * 1e9) : undefined;
+
     const createOptions: Docker.ContainerCreateOptions = {
       Image: image,
       Env: env.length ? env : undefined,
@@ -117,12 +171,38 @@ export async function createContainer(
         ? pairsToObject(labelPairs)
         : undefined,
       ExposedPorts: Object.keys(exposedPorts).length ? exposedPorts : undefined,
+      // Defining a healthcheck here is what makes Wait For State's "healthy"
+      // usable on a container this node created: without one Docker reports no
+      // health status at all, and there is nothing to wait for.
+      Healthcheck: healthTest
+        ? {
+            // CMD-SHELL runs the string through a shell, so an ordinary command
+            // line with pipes and || works as typed.
+            Test: ['CMD-SHELL', healthTest],
+            Interval: toNs(hc?.intervalSeconds),
+            Timeout: toNs(hc?.timeoutSeconds),
+            Retries: hc?.retries && hc.retries > 0 ? hc.retries : undefined,
+            StartPeriod: toNs(hc?.startPeriodSeconds),
+          }
+        : undefined,
       HostConfig: {
         PortBindings: Object.keys(portBindings).length ? portBindings : undefined,
         Binds: binds.length ? binds : undefined,
         AutoRemove: extra.autoRemove === true ? true : undefined,
         NetworkMode: extra.networkMode || undefined,
         Memory: extra.memoryMB ? Math.round(extra.memoryMB * 1024 * 1024) : undefined,
+        // Docker expresses a CPU ceiling in billionths of a core.
+        NanoCpus: extra.cpus ? Math.round(extra.cpus * 1e9) : undefined,
+        CpuShares: extra.cpuShares ? Math.round(extra.cpuShares) : undefined,
+        ExtraHosts: csv(extra.extraHosts).length ? csv(extra.extraHosts) : undefined,
+        Dns: csv(extra.dns).length ? csv(extra.dns) : undefined,
+        CapAdd: csv(extra.capAdd).length ? csv(extra.capAdd) : undefined,
+        CapDrop: csv(extra.capDrop).length ? csv(extra.capDrop) : undefined,
+        Privileged: extra.privileged === true ? true : undefined,
+        Devices: devices.length ? devices : undefined,
+        ShmSize: extra.shmSizeMB ? Math.round(extra.shmSizeMB * 1024 * 1024) : undefined,
+        Tmpfs: Object.keys(tmpfs).length ? tmpfs : undefined,
+        Init: extra.init === true ? true : undefined,
         RestartPolicy:
           extra.restartPolicy && extra.restartPolicy !== 'no'
             ? { Name: extra.restartPolicy }

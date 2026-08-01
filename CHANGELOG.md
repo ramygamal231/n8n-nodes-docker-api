@@ -137,6 +137,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   succeeded run again. Measured, not assumed — a node with two succeeding items
   and one failing item ran the succeeding two three times each.
 
+- **Container creation reaches the options real deployments need.** Health check,
+  CPU limit and CPU shares, capabilities to add and drop, privileged, devices,
+  extra hosts, DNS servers, shared memory size, tmpfs mounts, and an init process.
+
+  Two of these were defects rather than absences:
+
+  - **Health check.** Wait For State can wait for `healthy`, but there was no way
+    to *define* a health check when creating a container — so on any image that
+    did not already ship one, an advertised feature could not be used at all.
+  - **CPU limit.** Update Container could set CPU shares and Create could not, so
+    the only way to create a CPU-limited container was to create it unlimited and
+    immediately update it.
+
+- **`health` is now part of every container result.** Wait For State reported it
+  and nothing else did, so List and Inspect could not answer "which containers are
+  unhealthy" — the question the deploy-then-verify workflows this node is built
+  for actually ask. It is `null` when the container defines no health check, which
+  is deliberately distinct from `"unhealthy"`: one means nobody is checking, the
+  other means something checked and it failed. Docker's list endpoint has no
+  health field at all and buries the status inside its human-readable text, as
+  `Up 2 minutes (healthy)`; that is parsed out so both paths agree.
+
 - **Custom API Call** — a deliberate escape hatch to any Docker Engine endpoint,
   for anything this node does not cover or a newer Docker API than this release
   knows about. The response is returned exactly as Docker sent it and is
