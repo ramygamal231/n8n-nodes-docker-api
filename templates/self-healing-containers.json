@@ -3,16 +3,25 @@
   "nodes": [
     {
       "parameters": {
-        "eventTypes": ["container"],
-        "actions": ["die"],
-        "filters": { "label": "selfheal=true" },
+        "eventTypes": [
+          "container"
+        ],
+        "actions": [
+          "die"
+        ],
+        "filters": {
+          "label": "selfheal=true"
+        },
         "catchUp": true
       },
       "id": "b1000000-0000-4000-8000-000000000001",
       "name": "A container died",
       "type": "n8n-nodes-docker-api.dockerTrigger",
       "typeVersion": 1,
-      "position": [-660, 0],
+      "position": [
+        -660,
+        0
+      ],
       "notes": "Opt in per container with the label selfheal=true, so this never touches something you did not mean it to. Catch-up is on: a container that dies while n8n itself is restarting is still handled, which is exactly when it tends to happen."
     },
     {
@@ -29,7 +38,10 @@
       "name": "Capture logs BEFORE restarting",
       "type": "n8n-nodes-docker-api.docker",
       "typeVersion": 1,
-      "position": [-440, 0],
+      "position": [
+        -440,
+        0
+      ],
       "onError": "continueRegularOutput",
       "notes": "Taken first, deliberately. Restarting can rotate or discard the very output that explains the crash, so the evidence is collected while it still exists."
     },
@@ -43,7 +55,10 @@
       "name": "How many times has it restarted?",
       "type": "n8n-nodes-docker-api.docker",
       "typeVersion": 1,
-      "position": [-220, 0]
+      "position": [
+        -220,
+        0
+      ]
     },
     {
       "parameters": {
@@ -53,18 +68,28 @@
       "name": "Worth another try?",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [0, 0]
+      "position": [
+        0,
+        0
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": true, "version": 2 },
+          "options": {
+            "caseSensitive": true,
+            "version": 2
+          },
           "conditions": [
             {
               "id": "g1",
               "leftValue": "={{ $json.giveUp }}",
               "rightValue": true,
-              "operator": { "type": "boolean", "operation": "false", "singleValue": true }
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
             }
           ],
           "combinator": "and"
@@ -75,7 +100,10 @@
       "name": "Under the restart limit?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [220, 0]
+      "position": [
+        220,
+        0
+      ]
     },
     {
       "parameters": {
@@ -87,7 +115,10 @@
       "name": "Restart it",
       "type": "n8n-nodes-docker-api.docker",
       "typeVersion": 1,
-      "position": [440, -120]
+      "position": [
+        440,
+        -120
+      ]
     },
     {
       "parameters": {
@@ -101,19 +132,29 @@
       "name": "Confirm it stayed up",
       "type": "n8n-nodes-docker-api.docker",
       "typeVersion": 1,
-      "position": [660, -120],
+      "position": [
+        660,
+        -120
+      ],
       "notes": "Starting is not the same as staying started. If the container has a health check, change the target to 'healthy' for a much stronger guarantee."
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": true, "version": 2 },
+          "options": {
+            "caseSensitive": true,
+            "version": 2
+          },
           "conditions": [
             {
               "id": "r1",
               "leftValue": "={{ $json.reached }}",
               "rightValue": true,
-              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
             }
           ],
           "combinator": "and"
@@ -124,7 +165,10 @@
       "name": "Did it recover?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [880, -120]
+      "position": [
+        880,
+        -120
+      ]
     },
     {
       "parameters": {},
@@ -132,7 +176,10 @@
       "name": "Recovered",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [1100, -240],
+      "position": [
+        1100,
+        -240
+      ],
       "notes": "Worth a quiet notification rather than a loud one — but do send something. A container silently restarting nightly is a fault you want to know about eventually."
     },
     {
@@ -141,7 +188,10 @@
       "name": "ALERT: restart did not hold",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [1100, -20],
+      "position": [
+        1100,
+        -20
+      ],
       "notes": "Replace with Slack, Discord or email. The item already carries container, exitCode, restartCount and logTail — everything needed to triage without opening a terminal."
     },
     {
@@ -150,42 +200,183 @@
       "name": "ALERT: giving up, needs a human",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [440, 140],
+      "position": [
+        440,
+        140
+      ],
       "notes": "The restart limit was reached. Escalate loudly and stop restarting: past this point a restart loop only buries the cause and burns CPU."
+    },
+    {
+      "parameters": {
+        "content": "## 🏷️ Containers opt in\n\nAdd the label `selfheal=true` to any container you want restarted automatically:\n\n```\ndocker run -l selfheal=true ...\n```\n\nNothing else is touched, so this can never restart something you stopped on purpose.",
+        "height": 230,
+        "width": 460,
+        "color": 4
+      },
+      "id": "b9000000-0000-4000-8000-000000000001",
+      "name": "Opt in per container",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -700,
+        -280
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🔍 Logs are taken first\n\nDeliberately **before** the restart. Restarting can rotate or discard the very output that explains the crash.\n\nThe alert carries the last 50 lines, each labelled with the stream it came from.",
+        "height": 230,
+        "width": 440,
+        "color": 5
+      },
+      "id": "b9000000-0000-4000-8000-000000000002",
+      "name": "Evidence before action",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -220,
+        -280
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ✅ Starting is not recovering\n\nIf your container defines a health check, change **Confirm it stayed up** to wait for `healthy` instead of `running` — a much stronger guarantee.",
+        "height": 150,
+        "width": 700,
+        "color": 6
+      },
+      "id": "b9000000-0000-4000-8000-000000000003",
+      "name": "Confirm it held",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        420,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🛑 It gives up after 5 tries\n\nA container that has died five times will not be fixed by a sixth restart, and a restart loop buries the cause while burning CPU.\n\nChange the limit in **Worth another try?**",
+        "height": 200,
+        "width": 420,
+        "color": 3
+      },
+      "id": "b9000000-0000-4000-8000-000000000004",
+      "name": "Know when to stop",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        380,
+        100
+      ]
     }
   ],
   "connections": {
     "A container died": {
-      "main": [[{ "node": "Capture logs BEFORE restarting", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Capture logs BEFORE restarting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Capture logs BEFORE restarting": {
-      "main": [[{ "node": "How many times has it restarted?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "How many times has it restarted?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "How many times has it restarted?": {
-      "main": [[{ "node": "Worth another try?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Worth another try?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Worth another try?": {
-      "main": [[{ "node": "Under the restart limit?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Under the restart limit?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Under the restart limit?": {
       "main": [
-        [{ "node": "Restart it", "type": "main", "index": 0 }],
-        [{ "node": "ALERT: giving up, needs a human", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Restart it",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ALERT: giving up, needs a human",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Restart it": {
-      "main": [[{ "node": "Confirm it stayed up", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Confirm it stayed up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Confirm it stayed up": {
-      "main": [[{ "node": "Did it recover?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Did it recover?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Did it recover?": {
       "main": [
-        [{ "node": "Recovered", "type": "main", "index": 0 }],
-        [{ "node": "ALERT: restart did not hold", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Recovered",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ALERT: restart did not hold",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
-  "settings": { "executionOrder": "v1" },
+  "settings": {
+    "executionOrder": "v1"
+  },
   "pinData": {}
 }

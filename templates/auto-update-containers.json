@@ -307,6 +307,70 @@
         140
       ],
       "notes": "Nothing to do. This is the branch taken almost every run, and it costs one small registry call."
+    },
+    {
+      "parameters": {
+        "content": "## ⚙️ Start here\n\nOpen **Settings** and set the container name, image and ports.\n\nThat is the only node you need to touch to make this work for your setup.",
+        "height": 220,
+        "width": 460,
+        "color": 4
+      },
+      "id": "a9000000-0000-4000-8000-000000000001",
+      "name": "Start here",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -700,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🔍 Why this can run hourly\n\n**Check registry** reads the image manifest only — a few kilobytes — instead of pulling the whole image to find out nothing changed.\n\nIt compares **digests, never tags**. A tag moves; a digest does not.",
+        "height": 220,
+        "width": 660,
+        "color": 5
+      },
+      "id": "a9000000-0000-4000-8000-000000000002",
+      "name": "How the check stays cheap",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -220,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🚀 Replace, then prove it works\n\n**Wait until it is healthy** is the point of the whole workflow. *Running* only means the process started — *healthy* means it actually serves traffic.",
+        "height": 170,
+        "width": 900,
+        "color": 6
+      },
+      "id": "a9000000-0000-4000-8000-000000000003",
+      "name": "Replace and verify",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        640,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🔔 Connect your notifications\n\nReplace both placeholders with Slack, Discord, email — whatever you use.\n\n**The unhealthy branch is the important one.** An update that deploys but never comes up is the failure worth waking up for, and where you would roll back to the previous tag.",
+        "height": 460,
+        "width": 320,
+        "color": 3
+      },
+      "id": "a9000000-0000-4000-8000-000000000004",
+      "name": "Wire your alerts",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1720,
+        -320
+      ]
     }
   ],
   "connections": {
