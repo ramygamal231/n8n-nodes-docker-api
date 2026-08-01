@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reported an error and returned nothing. The container is now removed and the
   removal is stated in the error message. If it cannot be removed, that is
   reported too, rather than leaking silently.
+- **Skip Certificate Verification now actually skips it.** The option turned off
+  hostname checking but left chain verification running, so connecting to a
+  daemon with a self-signed certificate — the only reason the option exists, and
+  what its description promises — still failed with `unable to verify the first
+  certificate` whether the box was ticked or not. It has to be applied through a
+  custom HTTPS agent: docker-modem forwards only `key`, `cert`, `ca`,
+  `checkServerIdentity` and `agent` to the request, so `rejectUnauthorized` set
+  on the client is silently dropped. Found by running the TLS transport against a
+  real mutual-TLS endpoint for the first time.
 - **Get Events now says when Docker could not reach back as far as asked.** The
   daemon keeps a fixed ring of recent events in memory (256 by default) and
   answers historical queries from that alone. On a busy host it rolls in minutes

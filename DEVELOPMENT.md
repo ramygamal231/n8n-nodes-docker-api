@@ -110,6 +110,38 @@ The local daemon always answers, so without it the connection-failure path of
 every operation is unreachable from a test — while being the single most common
 real-world failure. `depth2` runs it against every resource.
 
+### Testing the TLS transport
+
+Docker Desktop does not expose a TLS endpoint, and reconfiguring the daemon to
+add one is invasive and easy to leave broken. Instead `n8ntest-tlsproxy` runs
+nginx terminating TLS in front of the Docker socket, with `ssl_verify_client on`
+so client certificates are genuinely required rather than merely offered.
+
+`C:\n8n-test\tls\` holds a CA, a server certificate carrying `IP:127.0.0.1` in
+its SAN, a client certificate with the `clientAuth` EKU, and a second *rogue* CA
+whose client certificate the proxy must reject.
+
+```powershell
+docker run -d --name n8ntest-tlsproxy -l n8ntest=true -p 127.0.0.1:2376:2376 `
+  -v /var/run/docker.sock:/var/run/docker.sock `
+  -v C:\n8n-test\tls\nginx.conf:/etc/nginx/nginx.conf:ro `
+  -v C:\n8n-test\tls:/certs:ro nginx:alpine
+```
+
+```bash
+node C:\n8n-test\run-test.js --file C:\n8n-test\tls-suite.json
+```
+
+Six credentials drive it: valid mutual TLS, read-only, a certificate signed by
+the rogue CA, no CA supplied, skip-verification, and a wrong port. The suite runs
+real operations across every resource over TLS — including the streaming paths
+(logs, TTY logs, exec, pull, build, save), since a proxy that buffered them would
+let a passing test prove nothing about streaming.
+
+Note that Windows `curl` uses schannel and cannot load PEM client certificates,
+so it reports a handshake failure that has nothing to do with the proxy. Verify
+by hand with Node, which is also what the node itself uses.
+
 ### Testing the trigger node
 
 A trigger is a workflow *entry point*, so it cannot be driven through a webhook

@@ -1,3 +1,5 @@
+import https from 'https';
+
 import Docker from 'dockerode';
 import { ICredentialDataDecryptedObject } from 'n8n-workflow';
 
@@ -79,8 +81,31 @@ export function createDockerClient(credentials: ICredentialDataDecryptedObject):
     // you want for a publicly signed daemon certificate.
     if (ca !== '') options.ca = ca;
     if (credentials.skipTlsVerify === true) {
-      (options as Docker.DockerOptions & { checkServerIdentity?: unknown }).checkServerIdentity =
-        () => undefined;
+      // Two separate checks have to be turned off, and only one of them was.
+      // `checkServerIdentity` governs whether the certificate's name matches the
+      // host; `rejectUnauthorized` governs whether it chains to a trusted CA at
+      // all. Overriding the first alone left the second running, so a self-signed
+      // daemon certificate — the entire reason this option exists — still failed
+      // with "unable to verify the first certificate" however the box was set.
+      //
+      // It has to go through an agent: docker-modem forwards only key, cert, ca,
+      // checkServerIdentity and agent to the request, so `rejectUnauthorized` set
+      // directly on the client is silently dropped. The agent carries the same
+      // certificate material because an https.Agent's own options win over the
+      // per-request ones when a socket is created.
+      const agentOptions: https.AgentOptions = {
+        rejectUnauthorized: false,
+        cert: options.cert,
+        key: options.key,
+      };
+      if (ca !== '') agentOptions.ca = ca;
+      Object.assign(
+        options as Docker.DockerOptions & {
+          checkServerIdentity?: unknown;
+          agent?: https.Agent;
+        },
+        { checkServerIdentity: () => undefined, agent: new https.Agent(agentOptions) },
+      );
     }
     return new Docker(options);
   }
