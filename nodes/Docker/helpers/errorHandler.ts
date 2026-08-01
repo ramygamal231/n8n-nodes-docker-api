@@ -1,4 +1,26 @@
 export function translateDockerError(error: unknown): string {
+  return `${translateMessage(error)}${retrySuffix(error)}`;
+}
+
+/**
+ * What the connection retry did, appended to whatever the message turned out to
+ * be. It has to be reattached here because translateMessage replaces the raw
+ * text entirely, which would otherwise discard it.
+ *
+ * Worth saying out loud: "we tried three times over four seconds and it never
+ * came back" is a different problem from "it failed once", and only the first
+ * justifies looking at the daemon rather than the workflow.
+ */
+function retrySuffix(error: unknown): string {
+  const e = error as { retryAttempts?: number; retryNote?: string };
+  if (e?.retryNote) return ` ${e.retryNote}`;
+  if (typeof e?.retryAttempts === 'number' && e.retryAttempts > 1) {
+    return ` (after ${e.retryAttempts} attempts)`;
+  }
+  return '';
+}
+
+function translateMessage(error: unknown): string {
   const msg = (error as Error)?.message ?? String(error);
   const lower = msg.toLowerCase();
 

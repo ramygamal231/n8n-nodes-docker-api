@@ -174,3 +174,39 @@ describe('translateDockerError — container startup (v1.0.0)', () => {
     expect(translateDockerError(new Error('invalid reference format'))).toContain('not valid');
   });
 });
+
+describe('translateDockerError — connection retry annotations', () => {
+  it('reports how many attempts were made, after the message is rewritten', () => {
+    // translateDockerError replaces the raw text wholesale, so the attempt count
+    // has to travel as a property and be reattached, or it is lost before the
+    // user ever sees it. "Tried three times over four seconds and it never came
+    // back" is a different problem from "failed once", and only the first
+    // justifies looking at the daemon rather than at the workflow.
+    const err = Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:2399'), {
+      retryAttempts: 3,
+    });
+    const msg = translateDockerError(err);
+    expect(msg).toContain('Cannot connect to Docker daemon');
+    expect(msg).toContain('after 3 attempts');
+  });
+
+  it('does not mention attempts when there was only one', () => {
+    const err = Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:2399'), {
+      retryAttempts: 1,
+    });
+    expect(translateDockerError(err)).not.toContain('attempts');
+  });
+
+  it('explains a write that was deliberately not retried', () => {
+    const err = Object.assign(new Error('socket hang up'), {
+      retryNote: 'The connection to Docker broke after the request had been sent.',
+    });
+    expect(translateDockerError(err)).toContain('after the request had been sent');
+  });
+
+  it('leaves an ordinary error untouched', () => {
+    expect(translateDockerError(new Error('No such container'))).toBe(
+      'Container not found. Verify the container ID or name is correct and the container exists.',
+    );
+  });
+});

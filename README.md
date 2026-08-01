@@ -236,6 +236,33 @@ without being destructive.
 
 ---
 
+## When the daemon goes away
+
+Docker restarts. Sockets briefly lose their permissions. A proxy hiccups. These
+fail a workflow step that would have succeeded a second later.
+
+Every request retries automatically on failures that never reached the daemon —
+`ECONNREFUSED`, a missing or unreadable socket, an unreachable host, or a
+`502`/`503`/`504` from a proxy in front of Docker. Three attempts with
+exponential backoff by default, configurable under **Connection Retry**.
+
+**Anything Docker actually answered is never retried.** A missing container, a
+name conflict, a refused registry login — the daemon was reachable and gave a
+considered reply, so retrying would only bury a configuration problem under a
+delay.
+
+**A write is never repeated once it may have been applied.** If the connection
+breaks *after* the request was sent, the daemon may already have created that
+container. Reads are retried; writes are not, and the error says the outcome is
+unknown rather than implying nothing happened.
+
+Retries are per request, so an item that already succeeded is never re-run. This
+matters more than it sounds: n8n's built-in **Retry On Fail** re-executes the
+whole node, so a batch of fifty containers where the last one fails would create
+the first forty-nine again. Leave it off for this node.
+
+---
+
 ## Security
 
 Access to the Docker daemon is equivalent to root on the host. That is true of

@@ -108,6 +108,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   changed. It also confirms a tag exists for a given architecture before a deploy
   commits to it, instead of failing at container start.
 
+- **Connection Retry.** A request that never reached the daemon is retried
+  automatically with exponential backoff — `ECONNREFUSED`, a missing or
+  unreadable socket, an unreachable host, or a `502`/`503`/`504` from a proxy in
+  front of Docker. Three attempts by default, configurable per node.
+
+  Two rules keep it from causing more harm than it prevents:
+
+  - **Anything Docker answered is never retried.** A missing container, a name
+    conflict, a refused registry login — the daemon was reachable and replied, so
+    retrying would bury a configuration problem under a delay.
+  - **A write is never repeated once it may have been applied.** If the
+    connection breaks *after* the request was sent, the daemon may already have
+    created that container. Reads are retried; writes are not, and the error says
+    the outcome is unknown instead of implying nothing happened.
+
+  Retries wrap a single request, not an operation and not the node. Run Container
+  is create, start, wait, remove — retrying *that* after the wait failed would
+  leave a second container behind. It is also why n8n's own **Retry On Fail** is
+  the wrong tool here: it re-executes the whole node, so items that already
+  succeeded run again. Measured, not assumed — a node with two succeeding items
+  and one failing item ran the succeeding two three times each.
+
 - **Custom API Call** — a deliberate escape hatch to any Docker Engine endpoint,
   for anything this node does not cover or a newer Docker API than this release
   knows about. The response is returned exactly as Docker sent it and is

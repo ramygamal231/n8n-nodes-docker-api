@@ -3,6 +3,14 @@ import https from 'https';
 import Docker from 'dockerode';
 import { ICredentialDataDecryptedObject } from 'n8n-workflow';
 
+import {
+  backoffMs,
+  DEFAULT_RETRY,
+  describeUnretried,
+  RetryOptions,
+  shouldRetry,
+} from './connectionRetry';
+
 export type DockerAuthMode = 'socket' | 'tcp' | 'tls' | 'portainer';
 
 /** Thrown for credential problems we can detect before touching the network. */
@@ -53,7 +61,67 @@ function requireNumber(
  * `url.resolve(base, '/containers/json')`, and an absolute path discards the base
  * pathname, silently dropping the prefix.
  */
-export function createDockerClient(credentials: ICredentialDataDecryptedObject): Docker {
+type DialOptions = { method?: string; path?: string };
+type DialCallback = (err: Error | null, data?: unknown) => void;
+type Dial = (options: DialOptions, callback: DialCallback) => void;
+
+/**
+ * Retries transient connection failures around a SINGLE Docker API request.
+ *
+ * This is the right seam for it. Retrying an operation instead would re-run
+ * whatever it had already done — Run Container is create, start, wait, remove,
+ * and repeating that after the wait failed would leave a second container
+ * behind. One request is the largest unit that can be repeated while still
+ * knowing exactly what is being repeated.
+ */
+function withConnectionRetry(docker: Docker, retry: RetryOptions): Docker {
+  if (!retry.enabled || retry.maxAttempts <= 1) return docker;
+
+  const modem = docker.modem as unknown as { dial: Dial };
+  const original = modem.dial.bind(modem);
+
+  modem.dial = (options: DialOptions, callback: DialCallback) => {
+    const method = (options?.method ?? 'GET').toUpperCase();
+    let attempt = 0;
+
+    const run = () => {
+      attempt++;
+      original(options, (err, data) => {
+        if (!err) return callback(null, data);
+
+        const canRetry = shouldRetry(err, method) && attempt < retry.maxAttempts;
+        if (!canRetry) {
+          // Carry these as properties rather than baking them into the message.
+          // translateDockerError replaces the raw text wholesale — that is the
+          // point of it — so anything appended here would be discarded before
+          // the user ever saw it.
+          const annotated = err as Error & { retryAttempts?: number; retryNote?: string };
+          if (attempt > 1) annotated.retryAttempts = attempt;
+          // Say why a network failure was left alone, so "not retried" is never
+          // mistaken for "retried and still broken".
+          const note = describeUnretried(err, method);
+          if (note) annotated.retryNote = note;
+          return callback(annotated, data);
+        }
+
+        setTimeout(run, backoffMs(attempt, retry.initialDelayMs));
+      });
+    };
+
+    run();
+  };
+
+  return docker;
+}
+
+export function createDockerClient(
+  credentials: ICredentialDataDecryptedObject,
+  retry: RetryOptions = DEFAULT_RETRY,
+): Docker {
+  return withConnectionRetry(buildClient(credentials), retry);
+}
+
+function buildClient(credentials: ICredentialDataDecryptedObject): Docker {
   const authMode = (credentials.authMode ?? 'socket') as DockerAuthMode;
 
   if (authMode === 'socket') {

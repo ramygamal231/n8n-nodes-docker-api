@@ -11,6 +11,7 @@ import {
 } from 'n8n-workflow';
 
 import { createDockerClient } from '../../utils/dockerClient';
+import { resolveRetryOptions } from '../../utils/connectionRetry';
 import { containerOperations, containerFields } from './descriptions';
 import { imageOperations, imageFields } from './descriptions/image/image.description';
 import {
@@ -24,6 +25,7 @@ import {
 } from './descriptions/customApiCall.description';
 import { executeContainerOperation } from './actions';
 import { executeImageOperation } from './actions/imageIndex';
+import { retryFields } from './descriptions/retry.description';
 import { executeInfraOperation } from './actions/infraIndex';
 import { customApiCall } from './actions/customApiCall.operation';
 import { enforceAccessMode } from './helpers/accessGuard';
@@ -96,6 +98,8 @@ export class Docker implements INodeType {
       ...systemFields,
       ...customApiOperations,
       ...customApiFields,
+      // Last, because it applies to everything and is rarely changed.
+      ...retryFields,
     ],
   };
 
@@ -144,7 +148,10 @@ export class Docker implements INodeType {
           : undefined,
     });
 
-    const docker = createDockerClient(credentials);
+    // Read once for the node rather than per item: it configures the transport,
+    // which every item shares.
+    const retry = resolveRetryOptions(this.getNodeParameter('retryPolicy', 0, {}));
+    const docker = createDockerClient(credentials, retry);
     const returnData: INodeExecutionData[] = [];
 
     for (let i = 0; i < items.length; i++) {
