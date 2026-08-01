@@ -36,8 +36,16 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
+          node-version: '22.x'
           registry-url: 'https://registry.npmjs.org'
+
+      # Trusted publishing is an npm CLI feature, and the npm bundled with Node
+      # predates it — it would fall back to looking for a token, find none, and
+      # fail with an authentication error that says nothing about OIDC.
+      - name: Use an npm that understands trusted publishing
+        run: |
+          npm install -g npm@latest
+          npm --version
 
       - name: Install dependencies
         run: npm ci
@@ -75,7 +83,10 @@ jobs:
           fi
           echo "No runtime dependencies"
 
+      # No NODE_AUTH_TOKEN. With a trusted publisher configured, npm exchanges
+      # the workflow's OIDC identity for a short-lived credential by itself.
+      # Passing an empty token would be worse than passing none: setup-node
+      # writes it into .npmrc, and the registry rejects the blank value with a
+      # 401 before trusted publishing is ever attempted.
       - name: Publish with provenance
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
