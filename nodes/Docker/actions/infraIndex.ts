@@ -23,6 +23,7 @@ import {
   systemInfo,
   systemPing,
   systemVersion,
+  systemAuth,
 } from './system.operation';
 
 type Single = (
@@ -57,6 +58,7 @@ const SINGLE: Record<string, Single> = {
   ping: systemPing,
   diskUsage: systemDiskUsage,
   events: systemEvents,
+  auth: systemAuth,
 };
 
 /** Network, volume and system share a dispatcher — none of them need per-item fan-out logic. */

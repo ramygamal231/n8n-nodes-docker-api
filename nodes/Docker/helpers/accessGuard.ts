@@ -22,12 +22,15 @@ const READ_ONLY_OPERATIONS = new Set<string>([
   'waitForState',
   'copyFrom',
   'export',
+  'pathInfo',
   // image
   'listImages',
   'inspectImage',
   'history',
   'search',
   'saveImage',
+  // Reads a manifest from the registry; nothing is pulled or stored.
+  'distributionInspect',
   // network
   'listNetworks',
   'inspectNetwork',
@@ -40,6 +43,9 @@ const READ_ONLY_OPERATIONS = new Set<string>([
   'ping',
   'diskUsage',
   'events',
+  // Verifying a registry login changes nothing on the Docker host — it is a
+  // diagnostic, so a Read Only credential may run it.
+  'auth',
 ]);
 
 /** HTTP methods that only read state, used to classify a Custom API Call. */

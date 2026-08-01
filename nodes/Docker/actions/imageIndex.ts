@@ -7,8 +7,15 @@ import {
   listImages,
   searchImages,
 } from './image/read.operation';
-import { pullImage, pushImage } from './image/registry.operation';
+import { distributionInspect, pullImage, pushImage } from './image/registry.operation';
 import { pruneImages, removeImage, tagImage } from './image/manage.operation';
+import {
+  buildImage,
+  commitContainer,
+  loadImage,
+  pruneBuildCache,
+  saveImage,
+} from './image/build.operation';
 
 /** Operations that emit many items rather than one. */
 const MULTI: Record<
@@ -27,9 +34,14 @@ const SINGLE: Record<
   history: imageHistory,
   pullImage,
   pushImage,
+  distributionInspect,
   tagImage,
   removeImage,
   pruneImages,
+  buildImage,
+  commit: commitContainer,
+  loadImage,
+  pruneBuildCache,
 };
 
 export async function executeImageOperation(
@@ -38,6 +50,11 @@ export async function executeImageOperation(
   operation: string,
   itemIndex: number,
 ): Promise<INodeExecutionData[]> {
+  // saveImage returns binary rather than json.
+  if (operation === 'saveImage') {
+    return [await saveImage.call(this, docker, itemIndex)];
+  }
+
   const multi = MULTI[operation];
   if (multi) {
     const results = await multi.call(this, docker, itemIndex);

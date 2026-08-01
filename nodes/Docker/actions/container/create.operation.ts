@@ -134,7 +134,20 @@ export async function createContainer(
     const created = await docker.createContainer(createOptions);
 
     if (extra.startAfterCreate === true) {
-      await created.start();
+      try {
+        await created.start();
+      } catch (startError) {
+        // The container exists at this point — Docker creates it first and only
+        // fails when starting (a taken host port is the usual cause). Leaving it
+        // matches the Docker CLI, but saying nothing would leave the user with a
+        // container they do not know about, so the message names it.
+        const shortId = created.id.substring(0, 12);
+        throw new Error(
+          `${translateDockerError(startError)} The container was created but could not be ` +
+            `started, and has been left in place as '${name || shortId}' (${shortId}) so you ` +
+            `can inspect or remove it.`,
+        );
+      }
     }
 
     const info = await created.inspect();

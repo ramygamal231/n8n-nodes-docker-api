@@ -7,7 +7,7 @@
 [![n8n community node](https://img.shields.io/badge/n8n-community%20node-EA4B71)](https://docs.n8n.io/integrations/community-nodes/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> Control Docker from your n8n workflows — 48 operations plus an event trigger,
+> Control Docker from your n8n workflows — 58 operations plus an event trigger,
 > with output you can feed straight into an IF node.
 
 ---
@@ -102,13 +102,14 @@ future addition can never quietly widen what a read-only credential can do.
 
 ## Operations
 
-### Containers (21)
+### Containers (24)
 
 | | |
 |---|---|
 | **Read** | List · Inspect · Get Logs · List Processes · Get Filesystem Changes · Get Stats |
 | **Lifecycle** | Create · Start · Stop · Restart · Kill · Pause · Unpause · Rename · Remove · Prune |
-| **Beyond the API** | Run (Ephemeral) · Execute Command · Wait For State · Copy From · Copy To |
+| **Files & state** | Export · Copy From · Copy To · Get Path Info · Update (limits, restart policy) |
+| **Beyond the API** | Run (Ephemeral) · Execute Command · Wait For State |
 
 **Run Container (Ephemeral)** creates, runs, captures output and removes — in one
 step. The container is cleaned up on every path, including timeout, so a workflow
@@ -136,9 +137,24 @@ cumulative counters.
 **Copy From / To Container** moves files through n8n's binary data system, so
 they can be written to disk, uploaded, or attached like any other file.
 
-### Images (9)
+### Images (15)
 
-List · Inspect · Get History · Search · Pull · Push · Tag · Remove · Prune
+List · Inspect · Get History · Search · Pull · Push · Tag · Remove · Prune ·
+**Build** · **Create From Container** · **Save** · **Load** · **Prune Build Cache** ·
+**Get Registry Info**
+
+**Build** takes a Dockerfile as text for the common case, or a tar context when the
+build needs to COPY local files. **Create From Container** snapshots a running
+container as an image. **Save** and **Load** move images as tar archives through
+n8n binary data, for backups or air-gapped transfer. **Prune Build Cache**
+reclaims the builder cache, which image pruning never touches and which is often
+the largest recoverable space on a build machine.
+
+**Get Registry Info** reads an image’s digest and platform list straight from the
+registry without pulling it — a few kilobytes instead of the whole image. Compare
+the digest against what is currently running to tell whether a rebuild is
+actually needed, or check a tag exists for your architecture before a deploy
+commits to it.
 
 Pull and Push wait for completion and return a summary — layers, digest, status,
 duration — instead of a progress firehose or a stream that never ends.
@@ -151,9 +167,9 @@ List · Inspect · Create · Connect Container · Disconnect Container · Remove
 
 List · Inspect · Create · Remove · Prune
 
-### System (5)
+### System (6)
 
-Get Info · Get Version · Ping · Get Disk Usage · Get Events
+Get Info · Get Version · Ping · Get Disk Usage · Get Events · Check Registry Credentials
 
 ### Custom API Call
 

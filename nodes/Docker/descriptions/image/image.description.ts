@@ -1,9 +1,20 @@
 import { INodeProperties } from 'n8n-workflow';
 
+import { imageGapFields } from '../gapfill.description';
+
 const IMAGE = 'image';
 
 /** Operations that act on one image by reference. */
-const TARGETED = ['inspectImage', 'pullImage', 'pushImage', 'tagImage', 'removeImage', 'history'];
+const TARGETED = [
+  'inspectImage',
+  'pullImage',
+  'pushImage',
+  'tagImage',
+  'removeImage',
+  'history',
+  'saveImage',
+  'distributionInspect',
+];
 
 export const imageOperations: INodeProperties[] = [
   {
@@ -50,6 +61,12 @@ export const imageOperations: INodeProperties[] = [
         action: 'Push image',
       },
       {
+        name: 'Get Registry Info',
+        value: 'distributionInspect',
+        description: "Read an image's digest and platforms from the registry without pulling it",
+        action: 'Get registry info for an image',
+      },
+      {
         name: 'Tag Image',
         value: 'tagImage',
         description: 'Add a new tag to an existing image',
@@ -60,6 +77,36 @@ export const imageOperations: INodeProperties[] = [
         value: 'removeImage',
         description: 'Delete an image from the local store',
         action: 'Remove image',
+      },
+      {
+        name: 'Build Image',
+        value: 'buildImage',
+        description: 'Build an image from a Dockerfile or a tar context',
+        action: 'Build image',
+      },
+      {
+        name: 'Create Image From Container',
+        value: 'commit',
+        description: 'Commit the current state of a container as a new image',
+        action: 'Create image from container',
+      },
+      {
+        name: 'Save Image',
+        value: 'saveImage',
+        description: 'Export an image as a tar archive',
+        action: 'Save image',
+      },
+      {
+        name: 'Load Image',
+        value: 'loadImage',
+        description: 'Import images from a tar archive',
+        action: 'Load image',
+      },
+      {
+        name: 'Prune Build Cache',
+        value: 'pruneBuildCache',
+        description: 'Reclaim builder cache, often the largest recoverable space',
+        action: 'Prune build cache',
       },
       {
         name: 'Prune Images',
@@ -163,7 +210,7 @@ export const imageFields: INodeProperties[] = [
     required: true,
     default: '',
     placeholder: 'myregistry.local:5000/team/app',
-    displayOptions: { show: { resource: [IMAGE], operation: ['tagImage'] } },
+    displayOptions: { show: { resource: [IMAGE], operation: ['tagImage', 'commit'] } },
     description: 'Repository for the new tag, including registry host if pushing elsewhere',
   },
   {
@@ -171,7 +218,7 @@ export const imageFields: INodeProperties[] = [
     name: 'targetTag',
     type: 'string',
     default: 'latest',
-    displayOptions: { show: { resource: [IMAGE], operation: ['tagImage'] } },
+    displayOptions: { show: { resource: [IMAGE], operation: ['tagImage', 'commit'] } },
     description: 'Tag to apply, for example a version number',
   },
 
@@ -221,7 +268,9 @@ export const imageFields: INodeProperties[] = [
     type: 'collection',
     placeholder: 'Add Field',
     default: {},
-    displayOptions: { show: { resource: [IMAGE], operation: ['pullImage', 'pushImage'] } },
+    displayOptions: {
+      show: { resource: [IMAGE], operation: ['pullImage', 'pushImage', 'distributionInspect'] },
+    },
     options: [
       {
         displayName: 'Registry Username',
@@ -254,8 +303,9 @@ export const imageFields: INodeProperties[] = [
     name: 'dryRun',
     type: 'boolean',
     default: false,
-    displayOptions: { show: { resource: [IMAGE], operation: ['removeImage', 'pruneImages'] } },
+    displayOptions: { show: { resource: [IMAGE], operation: ['removeImage', 'pruneImages', 'pruneBuildCache'] } },
     description:
       'Whether to report what would be removed without removing it. Deleting images cannot be undone.',
   },
+  ...imageGapFields,
 ];

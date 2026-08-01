@@ -94,8 +94,9 @@ describe('enforceAccessMode — fail-closed allowlist (v1.0.0)', () => {
     const readOps = [
       'list', 'inspect', 'getLogs', 'stats', 'top', 'changes', 'waitForState',
       'copyFrom', 'export', 'listImages', 'inspectImage', 'history', 'search',
-      'saveImage', 'listNetworks', 'inspectNetwork', 'listVolumes', 'inspectVolume',
-      'info', 'version', 'ping', 'diskUsage', 'events',
+      'saveImage', 'pathInfo', 'distributionInspect',
+      'listNetworks', 'inspectNetwork', 'listVolumes', 'inspectVolume',
+      'info', 'version', 'ping', 'diskUsage', 'events', 'auth',
     ];
     for (const op of readOps) {
       expect(() => enforceAccessMode(readonly, op)).not.toThrow();

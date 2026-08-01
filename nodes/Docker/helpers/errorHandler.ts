@@ -35,10 +35,26 @@ export function translateDockerError(error: unknown): string {
       'has not expired, and that it has access to the selected environment.'
     );
   }
+  // Registries deliberately answer "unauthorized" for a repository that does not
+  // exist, rather than 404 — revealing which private repositories exist would be
+  // an information leak. So this single response means either cause, and saying
+  // only "authentication failed" sends someone hunting for a credential problem
+  // when they have actually just mistyped the repository name.
   if (lower.includes('unauthorized') || lower.includes('authentication required')) {
     return (
-      'Registry authentication failed. Add registry credentials under Additional Fields, ' +
-      'or check that the token has not expired.'
+      'Registry rejected the request: either the repository does not exist, or it is ' +
+      'private and needs credentials — registries return the same response for both. ' +
+      'Check the repository name, and add registry credentials under Additional Fields ' +
+      'if it is private.'
+    );
+  }
+  // Node's HTTP client rejects a malformed path before the request is ever sent,
+  // with wording that describes its own internals. Reaching a user, "Request path
+  // contains unescaped characters" says nothing about the image name they typed.
+  if (lower.includes('unescaped characters') || lower.includes('invalid url')) {
+    return (
+      'That image reference is not valid. Image names must be lowercase with no spaces, ' +
+      'and a tag looks like name:tag — check for stray spaces or special characters.'
     );
   }
   if (lower.includes('tag does not exist') || lower.includes('no such image')) {
@@ -63,6 +79,30 @@ export function translateDockerError(error: unknown): string {
     return (
       'Image is still in use by one or more containers. Remove those containers first, ' +
       'or enable Force.'
+    );
+  }
+
+  // --- container startup ----------------------------------------------------
+  // A taken host port is one of the most common real-world failures, and Docker
+  // reports it as a 500 wrapped in networking-driver wording that buries the
+  // actual cause.
+  if (lower.includes('port is already allocated') || lower.includes('address already in use')) {
+    const port = msg.match(/Bind for [\d.:]*?(\d+) failed/i)?.[1];
+    return (
+      `Host port ${port ? `${port} ` : ''}is already in use by something else. ` +
+      'Choose a different host port, or stop whatever is bound to it.'
+    );
+  }
+  if (lower.includes('driver failed programming external connectivity')) {
+    return (
+      'Docker could not set up port forwarding for this container. The host port may be ' +
+      'in use, or the Docker network may need restarting.'
+    );
+  }
+  if (lower.includes('invalid reference format')) {
+    return (
+      'That image reference is not valid. Names must be lowercase, and a tag looks like ' +
+      'name:tag — check for stray spaces or capital letters.'
     );
   }
 

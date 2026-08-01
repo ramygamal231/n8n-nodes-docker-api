@@ -8,6 +8,7 @@ import {
 } from './container/lifecycle.description';
 import { createContainerFields } from './container/create.description';
 import { advancedContainerFields } from './container/advanced.description';
+import { containerGapFields } from '../descriptions/gapfill.description';
 
 export const containerOperations: INodeProperties[] = [
   {
@@ -90,6 +91,24 @@ export const containerOperations: INodeProperties[] = [
         action: 'Copy file to container',
       },
       {
+        name: 'Export Container',
+        value: 'export',
+        description: 'Download the container filesystem as a tar archive',
+        action: 'Export container',
+      },
+      {
+        name: 'Get Path Info',
+        value: 'pathInfo',
+        description: 'Check whether a path exists inside a container and its size',
+        action: 'Get path info',
+      },
+      {
+        name: 'Update Container',
+        value: 'update',
+        description: 'Change resource limits or restart policy without recreating',
+        action: 'Update container',
+      },
+      {
         name: 'Prune Containers',
         value: 'pruneContainers',
         description: 'Delete stopped containers, with a preview',
@@ -164,4 +183,5 @@ export const containerFields: INodeProperties[] = [
   ...createContainerFields,
   ...containerLifecycleFields,
   ...advancedContainerFields,
+  ...containerGapFields,
 ];

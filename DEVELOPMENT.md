@@ -62,9 +62,26 @@ node C:\n8n-test\run-test.js --file C:\n8n-test\suite.json
 node C:\n8n-test\run-test.js '{"name":"list","params":{"resource":"container","operation":"list","showAll":true}}'
 
 # every suite
-for f in suite phase1 phase2 phase3 phase4 phase5; do
+for f in suite phase1 phase2 phase3 phase4 phase5 phase7 comp-newops comp-core; do
   node C:\n8n-test\run-test.js --file C:\n8n-test\$f.json
 done
+```
+
+| Spec file | Covers |
+|---|---|
+| `suite` | core container and image operations |
+| `phase1`–`phase5` | each development phase's new operations |
+| `phase7` | Custom API Call, access guard, error translation |
+| `comp-newops` | Build, Save/Load, Commit, Export, Path Info, Update, Auth |
+| `comp-core` | multi-item fan-out, continueOnFail, Copy To, Search, Create |
+
+`coverage.js` cross-checks the operation list reported by the running n8n
+instance against the operations any spec actually runs, so a new operation added
+without a spec shows up as uncovered rather than being quietly assumed tested.
+It reads `SPEC_FILES` — add new spec files there.
+
+```bash
+node C:\n8n-test\coverage.js
 ```
 
 ### Testing the trigger node

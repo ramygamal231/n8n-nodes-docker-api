@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A rejected Portainer access token now produces a readable message instead of
   leaking Docker's raw `(HTTP code 401) unexpected - Invalid JWT token`.
+- A registry `unauthorized` response now names both of its possible causes.
+  Registries answer identically for a private repository and for one that does
+  not exist — revealing which private repositories exist would be a leak — so
+  reporting only "authentication failed" sent people hunting for a credential
+  problem when they had simply mistyped the repository name.
+- A malformed image reference now says the reference is invalid, rather than
+  surfacing Node's `Request path contains unescaped characters`, which describes
+  the HTTP client's internals and never mentions the name the user typed.
 
 - **Package size reduced from 4.2 MB to 72 kB.** Documentation screenshots were
   being copied into the published package, where nothing uses them — GitHub and
@@ -36,6 +44,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     A field that sometimes disappears breaks downstream IF/Switch nodes.
 
 ### Added
+
+- **Build Image.** Builds from a Dockerfile supplied as text — the common case,
+  which otherwise requires assembling a tar archive by hand — or from a build
+  context passed in as binary data when the build needs to `COPY` local files.
+  Build arguments, target stage, labels, `--no-cache` and `--pull` are all
+  supported. The build streams to completion and returns a summary (image ID,
+  tags, duration, step count) rather than a progress firehose. A failing `RUN`
+  step surfaces the step that failed and its output, instead of a bare non-zero
+  exit.
+- **Create Image From Container** (`commit`) — snapshots a container's filesystem
+  as a new image, with optional author, message, and config changes.
+- **Save Image** and **Load Image** — move images in and out as tar archives
+  through n8n binary data, for backup or transfer to a host with no registry
+  access. Save accepts multiple references in one call.
+- **Prune Build Cache.** The builder cache is not touched by image pruning and is
+  frequently the largest reclaimable space on a build host, yet nothing surfaced
+  it. Supports a filter on cache age and a dry run.
+- **Export Container** — the container's filesystem as a tar archive in binary
+  data.
+- **Get Path Info** — stat a path inside a container without copying it out.
+  Returns name, size, mode, modified time, and whether it is a directory or a
+  symlink. A missing path reports which path in which container was not found,
+  rather than a bare 404.
+- **Update Container** — change memory and CPU limits and the restart policy on a
+  running container, without recreating it.
+- **Check Registry Credentials** — verifies a registry username and password
+  against the registry before a pull or push depends on them.
+- **Get Registry Info** — reads an image's manifest from the registry without
+  pulling it, returning the digest and the platforms the tag is published for.
+  This is the cheap half of a pull: comparing the returned digest against the
+  running image answers "is there a new version?" for a few kilobytes, where the
+  same question asked with a pull downloads every layer to find out nothing
+  changed. It also confirms a tag exists for a given architecture before a deploy
+  commits to it, instead of failing at container start.
 
 - **Custom API Call** — a deliberate escape hatch to any Docker Engine endpoint,
   for anything this node does not cover or a newer Docker API than this release

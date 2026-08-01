@@ -25,6 +25,9 @@ const TARGETED_OPERATIONS = [
   'stats',
   'copyFrom',
   'copyTo',
+  'export',
+  'pathInfo',
+  'update',
 ];
 
 /** Operations that change state and therefore offer a dry run. */

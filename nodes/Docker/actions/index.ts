@@ -20,6 +20,11 @@ import {
   waitForState,
 } from './container/advanced.operation';
 import { copyFromContainer, copyToContainer } from './container/copy.operation';
+import {
+  containerPathInfo,
+  exportContainer,
+  updateContainer,
+} from './container/transfer.operation';
 
 const LIFECYCLE_ACTIONS: LifecycleAction[] = [
   'start',
@@ -55,6 +60,8 @@ const SINGLE_RESULT_OPERATIONS: Record<
   stats: containerStats,
   pruneContainers,
   copyTo: copyToContainer,
+  pathInfo: containerPathInfo,
+  update: updateContainer,
 };
 
 export async function executeContainerOperation(
@@ -72,6 +79,11 @@ export async function executeContainerOperation(
   // INodeExecutionData rather than going through the json-only path.
   if (operation === 'copyFrom') {
     return [await copyFromContainer.call(this, docker, itemIndex)];
+  }
+
+  // Also returns binary rather than json.
+  if (operation === 'export') {
+    return [await exportContainer.call(this, docker, itemIndex)];
   }
 
   if (isLifecycle(operation)) {

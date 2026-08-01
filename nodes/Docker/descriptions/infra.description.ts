@@ -1,5 +1,7 @@
 import { INodeProperties } from 'n8n-workflow';
 
+import { systemGapFields } from './gapfill.description';
+
 const NETWORK = 'network';
 const VOLUME = 'volume';
 const SYSTEM = 'system';
@@ -313,6 +315,7 @@ export const systemOperations: INodeProperties[] = [
       { name: 'Get Version', value: 'version', description: 'Docker engine and API versions', action: 'Get version' },
       { name: 'Ping', value: 'ping', description: 'Check the daemon is reachable and measure latency', action: 'Ping daemon' },
       { name: 'Get Disk Usage', value: 'diskUsage', description: 'Space used by images, containers, volumes and build cache', action: 'Get disk usage' },
+      { name: 'Check Registry Credentials', value: 'auth', description: 'Verify a registry login without pulling or pushing', action: 'Check registry credentials' },
       { name: 'Get Events', value: 'events', description: 'Read Docker events over a bounded time window', action: 'Get events' },
     ],
     default: 'info',
@@ -369,4 +372,5 @@ export const systemFields: INodeProperties[] = [
       },
     ],
   },
+  ...systemGapFields,
 ];

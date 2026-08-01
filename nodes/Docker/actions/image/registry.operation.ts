@@ -168,3 +168,61 @@ export async function pushImage(
     throw new Error(translateDockerError(error));
   }
 }
+
+/**
+ * Reads an image's manifest from the registry without pulling it.
+ *
+ * This is the cheap half of a pull: it resolves the tag to a digest and lists the
+ * platforms the tag is published for, transferring a few kilobytes instead of the
+ * whole image. That makes it the right primitive for "has a new version been
+ * published?" — compare the returned digest against the digest of the image
+ * currently running, and only pull when they differ. Doing the same with a pull
+ * would download every layer just to find out nothing had changed.
+ *
+ * It also answers "does this tag exist for my architecture?" before a deploy
+ * commits to it, which otherwise fails at container start on the wrong platform.
+ */
+export async function distributionInspect(
+  this: IExecuteFunctions,
+  docker: Docker,
+  itemIndex: number,
+): Promise<IDataObject> {
+  try {
+    const reference = (this.getNodeParameter('imageReference', itemIndex) as string).trim();
+    if (reference === '') throw new Error('Image Reference is required and cannot be empty.');
+    const extra = this.getNodeParameter('additionalFields', itemIndex, {}) as RegistryAuth;
+
+    const auth = authFrom(extra);
+    const info = await docker
+      .getImage(reference)
+      .distribution(auth ? { authconfig: auth } : {});
+
+    const platforms = (info.Platforms ?? []).map((p) => ({
+      os: p.os ?? null,
+      architecture: p.architecture ?? null,
+      // Present only for architectures with revisions, e.g. arm/v7 — null rather
+      // than an empty string, so an IF node can test it.
+      variant: p.variant || null,
+      osVersion: p['os.version'] || null,
+      // Docker returns "linux/amd64" style strings nowhere in this response, but
+      // it is what every user actually wants to match against.
+      platform: [p.os, p.architecture, p.variant].filter(Boolean).join('/'),
+    }));
+
+    return {
+      reference,
+      digest: info.Descriptor?.digest ?? null,
+      mediaType: info.Descriptor?.mediaType ?? null,
+      // The size of the manifest itself, not of the image. Naming it plainly
+      // avoids it being mistaken for the download size.
+      manifestSizeBytes: info.Descriptor?.size ?? null,
+      platforms,
+      platformCount: platforms.length,
+      isMultiPlatform: platforms.length > 1,
+      pulled: false,
+      inspectedAt: new Date().toISOString(),
+    };
+  } catch (error) {
+    throw new Error(translateDockerError(error));
+  }
+}

@@ -240,3 +240,45 @@ export async function systemEvents(
     throw new Error(translateDockerError(error));
   }
 }
+
+/**
+ * Verifies registry credentials without pulling or pushing anything.
+ *
+ * Lets a workflow confirm a registry login is still valid before starting work
+ * that depends on it, rather than discovering an expired token halfway through
+ * a deployment.
+ */
+export async function systemAuth(
+  this: IExecuteFunctions,
+  docker: Docker,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const username = (this.getNodeParameter('registryUsername', itemIndex, '') as string).trim();
+  const password = this.getNodeParameter('registryPassword', itemIndex, '') as string;
+  const serveraddress =
+    (this.getNodeParameter('registryAddress', itemIndex, '') as string).trim() ||
+    'https://index.docker.io/v1/';
+
+  try {
+    const result = (await docker.checkAuth({
+      username,
+      password,
+      serveraddress,
+    } as never)) as unknown as { Status?: string; IdentityToken?: string };
+
+    return {
+      authenticated: true,
+      registry: serveraddress,
+      username: username || null,
+      status: result?.Status ?? 'Login Succeeded',
+      // Present when the registry issues a short-lived token instead of
+      // accepting the password on every request.
+      identityTokenIssued: !!result?.IdentityToken,
+      checkedAt: new Date().toISOString(),
+    };
+  } catch (error) {
+    // A rejected login is the answer to "are these credentials valid", but it is
+    // still a failure, so the workflow can branch on it.
+    throw new Error(translateDockerError(error));
+  }
+}

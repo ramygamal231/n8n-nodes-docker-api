@@ -124,8 +124,53 @@ describe('translateDockerError — proxied-connection auth (v1.0.0)', () => {
   });
 
   it('still routes registry auth failures to the registry message', () => {
-    expect(translateDockerError(new Error('unauthorized: authentication required'))).toContain(
-      'Registry authentication failed',
-    );
+    // Registries return "unauthorized" both for a private repository and for one
+    // that does not exist, so the message must name both causes. Blaming
+    // credentials alone sends someone hunting for a token problem when they have
+    // actually mistyped the repository name — the far more common case on a read.
+    const msg = translateDockerError(new Error('unauthorized: authentication required'));
+    expect(msg).toContain('does not exist');
+    expect(msg).toContain('private');
+    expect(msg).toContain('Additional Fields');
+  });
+
+  it("translates Node's malformed-path error into an image reference problem", () => {
+    // Node's HTTP client rejects the path before the request is sent. Its wording
+    // describes its own internals and never mentions the image name that caused
+    // it, which is the only thing the user can act on.
+    for (const raw of [
+      'Request path contains unescaped characters',
+      'TypeError [ERR_INVALID_URL]: Invalid URL',
+    ]) {
+      const msg = translateDockerError(new Error(raw));
+      expect(msg).toContain('not valid');
+      expect(msg).toContain('name:tag');
+      expect(msg).not.toContain('unescaped');
+    }
+  });
+});
+
+describe('translateDockerError — container startup (v1.0.0)', () => {
+  it('names the port when a host port is already bound', () => {
+    // Docker buries this in networking-driver wording behind a 500, which is
+    // unhelpful for what is one of the most common real failures.
+    const raw =
+      '(HTTP code 500) server error - failed to set up container networking: driver failed ' +
+      'programming external connectivity on endpoint x (abc): Bind for 0.0.0.0:18099 failed: ' +
+      'port is already allocated ';
+    const result = translateDockerError(new Error(raw));
+    expect(result).toContain('18099');
+    expect(result).toContain('already in use');
+    expect(result).not.toContain('HTTP code 500');
+  });
+
+  it('handles the port-forwarding failure without a parseable port', () => {
+    expect(
+      translateDockerError(new Error('driver failed programming external connectivity')),
+    ).toContain('port forwarding');
+  });
+
+  it('explains an invalid image reference', () => {
+    expect(translateDockerError(new Error('invalid reference format'))).toContain('not valid');
   });
 });
