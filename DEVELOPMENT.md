@@ -62,7 +62,8 @@ node C:\n8n-test\run-test.js --file C:\n8n-test\suite.json
 node C:\n8n-test\run-test.js '{"name":"list","params":{"resource":"container","operation":"list","showAll":true}}'
 
 # every suite
-for f in suite phase1 phase2 phase3 phase4 phase5 phase7 comp-newops comp-core; do
+for f in suite phase1 phase2 phase3 phase4 phase5 phase7 \
+         comp-newops comp-core comp-dist depth1 depth2; do
   node C:\n8n-test\run-test.js --file C:\n8n-test\$f.json
 done
 ```
@@ -74,15 +75,40 @@ done
 | `phase7` | Custom API Call, access guard, error translation |
 | `comp-newops` | Build, Save/Load, Commit, Export, Path Info, Update, Auth |
 | `comp-core` | multi-item fan-out, continueOnFail, Copy To, Search, Create |
+| `comp-dist` | Get Registry Info |
+| `depth1` | second and third scenarios per operation; every optional field |
+| `depth2` | failure paths, including an unreachable daemon on every resource |
 
-`coverage.js` cross-checks the operation list reported by the running n8n
-instance against the operations any spec actually runs, so a new operation added
-without a spec shows up as uncovered rather than being quietly assumed tested.
-It reads `SPEC_FILES` — add new spec files there.
+### Measuring whether the tests are actually thorough
+
+Two audits, because they answer different questions and the weaker one is easy to
+mistake for the stronger.
+
+`coverage.js` asks **does every operation have at least one spec** — it reads the
+operation list from the running n8n instance and the covered set from the spec
+files, so neither side is taken on trust.
+
+`depth-audit.js` asks the question that actually matters: **how many scenarios
+does each operation have, how many of those are failure cases, and which input
+fields has no spec ever set.** A field nothing sets has never run, however many
+specs its operation has. Both read `SPEC_FILES` — add new spec files to both.
 
 ```bash
 node C:\n8n-test\coverage.js
+node C:\n8n-test\depth-audit.js
 ```
+
+The five operations with no failure-case spec are all prunes, which sweep and
+have no failure mode of their own; they are covered by dry-run and exact-list
+assertions instead. The one unexercised "field" is `customNotice`, a UI notice
+that takes no input.
+
+### The unreachable-daemon credential
+
+`.credid_dead` is a TCP credential pointing at a port with nothing listening.
+The local daemon always answers, so without it the connection-failure path of
+every operation is unreachable from a test — while being the single most common
+real-world failure. `depth2` runs it against every resource.
 
 ### Testing the trigger node
 

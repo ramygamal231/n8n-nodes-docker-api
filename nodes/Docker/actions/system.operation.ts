@@ -226,9 +226,43 @@ export async function systemEvents(
         };
       });
 
+    // The daemon keeps a fixed ring of recent events in memory — 256 by default —
+    // and answers a historical query from that buffer alone. On a busy host it
+    // rolls in minutes: a container with a healthcheck emits three exec events
+    // every interval, which is enough to evict everything else. Asking for the
+    // last hour then returns the last few minutes, with nothing to distinguish
+    // that from an hour in which nothing else happened.
+    //
+    // Both conditions are required before saying so. A full buffer alone is not
+    // evidence — a daemon configured with a larger one could legitimately return
+    // 256 events — and a short reach alone is not either, since a quiet host
+    // genuinely has no older events. Together they mean the buffer was full AND
+    // did not reach back to what was asked, which only happens under eviction.
+    const times = events.map((e) => e.time).filter((t): t is string => typeof t === 'string');
+    const oldest = times.length ? times.reduce((a, b) => (a < b ? a : b)) : null;
+    const newest = times.length ? times.reduce((a, b) => (a > b ? a : b)) : null;
+    const DAEMON_EVENT_BUFFER = 256;
+    const truncated =
+      events.length >= DAEMON_EVENT_BUFFER &&
+      oldest !== null &&
+      new Date(oldest).getTime() > sinceSec * 1000 + 60_000;
+
     return {
       events,
       eventCount: events.length,
+      // The window actually covered, which is not always the window requested.
+      oldestEvent: oldest,
+      newestEvent: newest,
+      windowTruncated: truncated,
+      ...(truncated
+        ? {
+            warning:
+              `Docker's in-memory event buffer (${DAEMON_EVENT_BUFFER} events) filled before ` +
+              `reaching the requested start time, so older events were discarded by the daemon ` +
+              `and cannot be retrieved. These results only reach back to ${oldest}. Use the ` +
+              `Docker Trigger node to capture events as they happen rather than reading history.`,
+          }
+        : {}),
       window: {
         since: new Date(sinceSec * 1000).toISOString(),
         until: new Date(untilSec * 1000).toISOString(),

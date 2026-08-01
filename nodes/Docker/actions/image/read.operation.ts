@@ -132,6 +132,14 @@ export async function searchImages(
     const term = (this.getNodeParameter('searchTerm', itemIndex) as string).trim();
     const limit = this.getNodeParameter('searchLimit', itemIndex, 25) as number;
 
+    // Every other text input here rejects an empty value; search did not, and
+    // instead sent the empty term to the registry and returned whatever came
+    // back. A blank field is nearly always an expression that resolved to
+    // nothing, and silently returning an arbitrary result set hides that.
+    if (term === '') {
+      throw new Error('Search Term is required and cannot be empty.');
+    }
+
     const results = (await docker.searchImages({ term, limit })) as unknown as Array<{
       name: string;
       description: string;

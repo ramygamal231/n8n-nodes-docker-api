@@ -24,6 +24,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reported an error and returned nothing. The container is now removed and the
   removal is stated in the error message. If it cannot be removed, that is
   reported too, rather than leaking silently.
+- **Get Events now says when Docker could not reach back as far as asked.** The
+  daemon keeps a fixed ring of recent events in memory (256 by default) and
+  answers historical queries from that alone. On a busy host it rolls in minutes
+  — a single container with a healthcheck emits three events per interval — so a
+  request for the last hour could return the last two minutes with nothing to
+  distinguish that from an hour in which nothing happened. The result now carries
+  `oldestEvent`, `newestEvent` and `windowTruncated`, plus a warning naming how
+  far back the data actually goes.
+- Search Images now rejects an empty search term, like every other text input in
+  the node. It previously sent the empty term to the registry and returned
+  whatever came back — and a blank field is nearly always an expression that
+  resolved to nothing.
 - A malformed image reference now says the reference is invalid, rather than
   surfacing Node's `Request path contains unescaped characters`, which describes
   the HTTP client's internals and never mentions the name the user typed.
