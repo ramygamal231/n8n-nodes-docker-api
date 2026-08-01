@@ -12,7 +12,7 @@
 
 ---
 
-## Why this node
+## ✨ Why this node
 
 **No dependencies.** Talks to the Docker Engine API directly over a socket, TCP
 or TLS. If you already run Portainer, it can go through that too — but nothing
@@ -48,7 +48,7 @@ information say so in the output rather than returning a confident half-answer.
 
 ---
 
-## Install
+## 📦 Install
 
 **Community Nodes (recommended)**
 
@@ -64,7 +64,7 @@ Requires a self-hosted n8n with access to a Docker daemon.
 
 ---
 
-## Quick start
+## 🚀 Quick start
 
 1. Add a **Docker API** credential and pick a connection mode
 2. Press **Test Connection** — it reports the daemon version on success
@@ -74,7 +74,7 @@ Requires a self-hosted n8n with access to a Docker daemon.
 
 ---
 
-## Connecting
+## 🔌 Connecting
 
 | Mode | Use when |
 |---|---|
@@ -101,7 +101,7 @@ future addition can never quietly widen what a read-only credential can do.
 
 ---
 
-## Operations
+## 📋 Operations
 
 ### Containers (24)
 
@@ -186,7 +186,7 @@ deliberately does not promise a stable shape.
 
 ---
 
-## Docker Trigger
+## ⚡ Docker Trigger
 
 Start a workflow when something happens in Docker.
 
@@ -208,41 +208,63 @@ stopping.
 
 ---
 
-## Example workflows
+## 🔥 Real use cases
 
-**Restart a service when it dies**
+### ♻️ Self-healing containers
+
+A container dies at 3am. Nobody is awake. It comes back by itself.
 
 ```
 Docker Trigger (container · die)  →  IF (name = api-gateway)  →  Docker: Start Container
 ```
 
-**Alert on unhealthy containers**
+The trigger catches up on anything that happened while n8n itself was
+restarting, so a crash during a deploy window is not silently lost.
+
+### 🚨 Alert before your users notice
+
+Health status changes reach you before the support ticket does.
 
 ```
 Docker Trigger (container · health_status)  →  IF (health = unhealthy)  →  Slack
 ```
 
-**Run a job in an isolated container**
+### 🚢 Deploy and verify
+
+Pull, replace, and wait for the new container to report *healthy* — not merely
+*running*, which is the difference between a deploy that worked and one that
+only looks like it did.
+
+```
+Docker: Get Registry Info  →  IF (digest changed)  →  Docker: Pull Image
+   →  Docker: Remove Container  →  Docker: Create Container
+   →  Docker: Wait For State (healthy)  →  Slack
+```
+
+Get Registry Info checks for a new version without downloading the image, so the
+schedule costs kilobytes on every day that nothing has changed.
+
+### 🧪 Run a job in a disposable container
 
 ```
 Schedule  →  Docker: Run Container (Ephemeral)  →  IF (exitCode = 0)  →  …
 ```
 
-Nothing is left behind — the container is removed even if the command fails or
-times out.
+Nothing is left behind — the container is removed on every path, including
+timeout, so a workflow that fails midway never accumulates containers.
 
-**Nightly disk report**
+### 📊 Nightly disk report
 
 ```
 Schedule  →  Docker: Get Disk Usage  →  Docker: Prune Images (Dry Run)  →  Email
 ```
 
-The dry run reports what *would* be reclaimed, so the report is informative
-without being destructive.
+The dry run reports exactly what *would* be reclaimed, so the report is
+informative without being destructive.
 
 ---
 
-## When the daemon goes away
+## 🩹 When the daemon goes away
 
 Docker restarts. Sockets briefly lose their permissions. A proxy hiccups. These
 fail a workflow step that would have succeeded a second later.
@@ -269,7 +291,7 @@ the first forty-nine again. Leave it off for this node.
 
 ---
 
-## Security
+## 🔒 Security
 
 Access to the Docker daemon is equivalent to root on the host. That is true of
 any tool that talks to Docker, and worth stating plainly.
@@ -284,7 +306,7 @@ The credential UI carries this warning too, and Read Only is the default.
 
 ---
 
-## Scope
+## 🗺️ Scope
 
 This node covers containers, images, networks, volumes and system operations —
 the surface that automation workflows actually use.
@@ -297,12 +319,12 @@ remains reachable through **Custom API Call**.
 
 ---
 
-## Contributing
+## ⭐ Contributing
 
 Issues and pull requests are welcome — particularly bug reports with a
 reproducible workflow. See [DEVELOPMENT.md](./DEVELOPMENT.md) for the local
 setup and test harness.
 
-## License
+## 📄 License
 
 [MIT](./LICENSE)
