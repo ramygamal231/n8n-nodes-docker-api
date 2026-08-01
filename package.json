@@ -16,7 +16,7 @@
   "homepage": "https://github.com/ramygamal231/n8n-nodes-docker-api",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ramygamal231/n8n-nodes-docker-api.git"
+    "url": "git+https://github.com/ramygamal231/n8n-nodes-docker-api.git"
   },
   "author": "Ramy Gamal",
   "main": "index.js",
@@ -60,13 +60,16 @@
     "n8n-workflow": "*",
     "prettier": "^2.7.0",
     "ts-jest": "^29.0.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "tar-stream": "^2.2.0"
   },
   "dependencies": {
-    "dockerode": "^4.0.0",
-    "tar-stream": "^2.2.0"
+    "dockerode": "^4.0.0"
   },
   "peerDependencies": {
     "n8n-workflow": "*"
+  },
+  "bugs": {
+    "url": "https://github.com/ramygamal231/n8n-nodes-docker-api/issues"
   }
 }

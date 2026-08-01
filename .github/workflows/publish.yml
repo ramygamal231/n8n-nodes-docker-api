@@ -1,0 +1,81 @@
+name: Publish to npm
+
+# Publishing happens here rather than from a laptop because n8n requires a
+# provenance statement for verified community nodes: from 1 May 2026 a package
+# published locally cannot be verified, however good it is. Provenance is a
+# signed attestation that THIS workflow, in THIS repository, at THIS commit,
+# produced the tarball — which GitHub can only vouch for if GitHub built it.
+#
+# Triggered by pushing a version tag:
+#   npm version 1.0.0 && git push --follow-tags
+#
+# One-time setup on npmjs.com (cannot be done from here):
+#   Package settings -> Publish access -> Trusted Publishers -> Add a publisher
+#   GitHub Actions | owner: ramygamal231 | repo: n8n-nodes-docker-api
+#   workflow: publish.yml
+# With a trusted publisher configured, no NPM_TOKEN secret is needed at all —
+# the OIDC exchange replaces it, so there is no long-lived credential to leak.
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # Required for OIDC. Without it npm cannot mint a provenance statement and
+  # the publish silently produces an unverifiable package.
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      # A published package that disagrees with its tag is worse than a failed
+      # release, because it cannot be taken back.
+      - name: Verify the tag matches package.json
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG="$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $PKG"
+            exit 1
+          fi
+          echo "Tag and package.json agree on $PKG"
+
+      # Verified community nodes may not ship runtime dependencies. Catching it
+      # here means a stray `npm install --save` can never reach the registry.
+      - name: Verify there are no runtime dependencies
+        run: |
+          COUNT="$(node -p "Object.keys(require('./package.json').dependencies || {}).length")"
+          if [ "$COUNT" != "0" ]; then
+            echo "Found $COUNT runtime dependencies; verified nodes must have none:"
+            node -p "JSON.stringify(require('./package.json').dependencies, null, 2)"
+            exit 1
+          fi
+          echo "No runtime dependencies"
+
+      - name: Publish with provenance
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
