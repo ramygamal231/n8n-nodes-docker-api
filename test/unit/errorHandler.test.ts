@@ -16,7 +16,7 @@ describe('translateDockerError', () => {
   it('handles permission denied error', () => {
     const error = new Error('permission denied while trying to connect to the Docker daemon socket');
     const result = translateDockerError(error);
-    expect(result).toContain('Permission denied accessing Docker socket');
+    expect(result).toContain('Permission denied opening the Docker socket');
   });
 
   it('handles No such container error', () => {
@@ -222,5 +222,31 @@ describe('translateDockerError — an interrupted response', () => {
       expect(msg).toContain('not known whether the daemon completed');
       expect(msg).toContain('Check the current state');
     }
+  });
+});
+
+describe('translateDockerError — socket permissions', () => {
+  it('explains a permission failure instead of leaking the errno', () => {
+    // Node never says "permission denied" for a refused connection: it reports
+    // EACCES on Unix and EPERM on Windows, and the original rule matched neither.
+    // A socket whose ownership changed under a running n8n therefore reached the
+    // user as the raw "connect EACCES /var/run/docker.sock" — which names the
+    // failure but not the fix, for one of the commonest deployment problems.
+    for (const raw of [
+      'connect EACCES /var/run/docker.sock',
+      'connect EPERM \\.\pipe\docker_engine',
+      'permission denied while trying to connect to the Docker daemon socket',
+    ]) {
+      const msg = translateDockerError(new Error(raw));
+      expect(msg).toContain('Permission denied opening the Docker socket');
+      expect(msg).toContain('docker group');
+      expect(msg).not.toMatch(/\bE(ACCES|PERM)\b/);
+    }
+  });
+
+  it('does not mistake an unrelated message containing the letters for a permission error', () => {
+    expect(translateDockerError(new Error('No such container: EPERMANENT'))).toContain(
+      'Container not found',
+    );
   });
 });

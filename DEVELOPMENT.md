@@ -136,6 +136,25 @@ only in the retry layer: the retry wrapper sits on `modem.dial`, and exec and
 attach use a HIJACKED stream that fails long after dial returned. The retry layer
 never sees it.
 
+### Testing socket permissions
+
+The scenario the retry feature exists for: the socket permissions change under
+a running workflow. Docker Desktop on Windows exposes a NAMED PIPE, so there is
+no file mode to chmod — but a pipe has an ACL, which is the same thing from the
+client side. `denied-pipe.ps1` creates a pipe whose ACL denies the calling user.
+
+```bash
+node C:\n8n-test\permission-test.js
+```
+
+Measured: Windows reports this as **EPERM**, not EACCES. Both are classified as
+connect-phase, so this exercises the branch the Linux case would.
+
+Recovery is tested by replacing the denied pipe, at the same name, with
+`pipe-proxy.js` — a permissive pipe forwarding to the real Docker pipe. The
+credential never changes; the endpoint simply becomes usable, which is what
+fixing permissions looks like from the node's side.
+
 ### Testing the TLS transport
 
 Docker Desktop does not expose a TLS endpoint, and reconfiguring the daemon to

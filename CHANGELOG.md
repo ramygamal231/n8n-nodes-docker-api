@@ -33,6 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `checkServerIdentity` and `agent` to the request, so `rejectUnauthorized` set
   on the client is silently dropped. Found by running the TLS transport against a
   real mutual-TLS endpoint for the first time.
+- **A socket permission failure now explains itself.** Node never uses the words
+  "permission denied" for a refused connection — it reports `EACCES` on Unix and
+  `EPERM` on Windows, and the rule matched neither. A socket whose ownership
+  changed under a running n8n therefore surfaced as the raw
+  `connect EACCES /var/run/docker.sock`, naming the failure but not the fix, for
+  one of the commonest deployment problems there is. The message now points at
+  the docker group and at socket ownership after a daemon restart.
 - **Get Events now says when Docker could not reach back as far as asked.** The
   daemon keeps a fixed ring of recent events in memory (256 by default) and
   answers historical queries from that alone. On a busy host it rolls in minutes

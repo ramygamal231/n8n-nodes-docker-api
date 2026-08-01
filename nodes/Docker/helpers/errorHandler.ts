@@ -134,8 +134,20 @@ function translateMessage(error: unknown): string {
   if (msg.includes('ENOENT') && msg.includes('docker.sock')) {
     return 'Docker socket not found at the specified path. Verify the socket path in your credential.';
   }
-  if (msg.toLowerCase().includes('permission denied')) {
-    return 'Permission denied accessing Docker socket. Ensure the n8n process has permission to access the socket.';
+  // Node never uses the words "permission denied" for a refused connection — it
+  // reports EACCES on Unix and EPERM on Windows, and the old rule matched neither.
+  // A socket whose ownership changed under a running n8n therefore surfaced as the
+  // raw "connect EACCES /var/run/docker.sock", which names the failure but not
+  // the fix. This is one of the most common real deployment problems.
+  if (
+    msg.toLowerCase().includes('permission denied') ||
+    /\bE(ACCES|PERM)\b/.test(msg)
+  ) {
+    return (
+      'Permission denied opening the Docker socket. The n8n process is not allowed to access ' +
+      'it — on Linux add that user to the docker group, or check the socket’s ownership if it ' +
+      'was recreated by a daemon restart. On Windows, check the named pipe’s permissions.'
+    );
   }
   // Must precede the container rule below. Docker answers an unrecognised
   // endpoint with "page not found", which a broad 'not found' match reported as
