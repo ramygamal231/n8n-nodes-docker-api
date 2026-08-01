@@ -128,6 +128,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     everything that happened while n8n was down. The last-seen event is persisted
     with the workflow and replayed from on reconnect. Verified: an event fired
     while the workflow was deactivated is delivered once it is reactivated.
+  - All five event types are verified end to end against a live daemon:
+    container, image, network, volume and daemon. Daemon events have no API call
+    that produces them — the daemon emits one when it re-reads its configuration
+    — so that path is exercised by signalling dockerd and confirming the event
+    arrives typed correctly.
   - **Reconnects automatically** with capped exponential backoff. The event
     stream dies for ordinary reasons — daemon restarts, socket hiccups, a laptop
     sleeping — and a trigger that quietly stops listening is worse than none.

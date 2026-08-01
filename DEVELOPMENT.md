@@ -153,6 +153,24 @@ execution carrying it.
 node C:\n8n-test\trigger-test.js
 ```
 
+### Testing daemon events
+
+Daemon events need their own harness, because no Docker API call produces one —
+the daemon emits `daemon/reload` when it re-reads its configuration, which takes
+a SIGHUP. On Docker Desktop that means signalling `dockerd` inside the
+`docker-desktop` WSL distro.
+
+```bash
+node C:\n8n-test\daemon-trigger-test.js
+```
+
+A SIGHUP is a *live* reload: dockerd re-reads `daemon.json` and applies a subset
+of settings without stopping, restarting or recreating anything. Because that is
+a stronger claim than the rest of the suite makes, the harness does not take it
+on trust — it records every container (with `StartedAt` and `RestartCount`),
+image, volume and network before signalling, and diffs afterwards. If the reload
+disturbed anything the diff prints it and the test fails.
+
 It covers the two behaviours that are easy to get wrong and invisible when they
 break: **catch-up** (deactivate, cause an event, reactivate — the event must
 still arrive) and **no duplicate delivery** (Docker's `since` is inclusive, so
